@@ -1,0 +1,58 @@
+export function formatCurrency(value) {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value || 0);
+}
+
+export function formatDate(value, opts = {}) {
+  if (!value) return '-';
+  return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric', ...opts }).format(new Date(value));
+}
+
+export function formatDateTime(value) {
+  if (!value) return '-';
+  return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
+}
+
+export const STATUS_LABELS = {
+  lunas: 'Lunas',
+  belum_lunas: 'Belum Lunas',
+  dibatalkan: 'Dibatalkan',
+  menunggu_pengecekan: 'Menunggu Pengecekan',
+  sedang_dikerjakan: 'Sedang Dikerjakan',
+  menunggu_sparepart: 'Menunggu Sparepart',
+  selesai: 'Selesai',
+  diambil: 'Sudah Diambil',
+};
+
+export const ROLE_LABELS = {
+  owner: 'Owner',
+  admin: 'Admin',
+  kasir: 'Kasir',
+  teknisi: 'Teknisi',
+};
+
+export const KONDISI_FISIK_OPTIONS = [
+  { value: 'baik', label: 'Baik' },
+  { value: 'rusak', label: 'Rusak' },
+  { value: 'tidak_dicek', label: 'Tidak Dicek' },
+];
+
+export const KELENGKAPAN_OPTIONS = [
+  { value: 'ada', label: 'Ada' },
+  { value: 'tidak_ada', label: 'Tidak Ada' },
+];
+
+export const CHECKLIST_STATUS_LABELS = {
+  baik: 'Baik',
+  rusak: 'Rusak',
+  tidak_dicek: 'Tidak Dicek',
+  ada: 'Ada',
+  tidak_ada: 'Tidak Ada',
+};
+
+export const CHECKLIST_STATUS_STYLES = {
+  baik: 'text-emerald-600',
+  ada: 'text-emerald-600',
+  rusak: 'text-red-500',
+  tidak_dicek: 'text-amber-500',
+  tidak_ada: 'text-neutral-400',
+};
