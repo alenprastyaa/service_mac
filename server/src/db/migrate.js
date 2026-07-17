@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql2/promise');
+const bcrypt = require('bcryptjs');
 
 const DB_NAME = process.env.DB_NAME || 'oren_macstore';
 
@@ -35,9 +36,32 @@ async function ensureSchema() {
         if (err.code !== 'ER_DUP_KEYNAME') throw err;
       }
     }
+
+    await ensureDefaultOwner(conn);
   } finally {
     await conn.end();
   }
+}
+
+// Creates one owner account if the users table is still empty, so a fresh
+// database always has a working login. Never touches users if any already exist.
+async function ensureDefaultOwner(conn) {
+  const [rows] = await conn.query('SELECT COUNT(*) AS count FROM users');
+  if (rows[0].count > 0) return;
+
+  const email = process.env.ADMIN_EMAIL || 'owner@orenmacstore.id';
+  const password = process.env.ADMIN_PASSWORD || 'owner123';
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  await conn.query('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)', ['Owner', email, passwordHash, 'owner']);
+
+  console.log('=================================================');
+  console.log('Akun owner pertama dibuat otomatis:');
+  console.log(`  Email    : ${email}`);
+  console.log(`  Password : ${password}`);
+  console.log('Segera login dan ganti password di menu Pengaturan.');
+  console.log('(Set ADMIN_EMAIL / ADMIN_PASSWORD di .env untuk mengubah nilai default ini.)');
+  console.log('=================================================');
 }
 
 module.exports = { ensureSchema };
