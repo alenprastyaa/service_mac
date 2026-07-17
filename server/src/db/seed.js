@@ -24,8 +24,8 @@ async function main() {
     multipleStatements: true,
   });
 
-  console.log('Applying schema (drop & recreate)...');
-  const schemaSql = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
+  console.log(`Applying schema (drop & recreate) on database "${DB_NAME}"...`);
+  const schemaSql = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8').replace(/__DB_NAME__/g, DB_NAME);
   await conn.query(schemaSql);
   await conn.changeUser({ database: DB_NAME });
 

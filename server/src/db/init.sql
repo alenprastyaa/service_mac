@@ -1,23 +1,9 @@
--- Oren MacStore database schema (MySQL 8+ / MariaDB 10.4+)
+-- Idempotent schema bootstrap, run automatically on every server start.
+-- Unlike schema.sql (used by `npm run seed`), this NEVER drops tables or data.
 CREATE DATABASE IF NOT EXISTS `__DB_NAME__` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE `__DB_NAME__`;
 
--- Development-stage schema: dropped & recreated on every `npm run seed`.
-DROP TABLE IF EXISTS service_checklist_items;
-DROP TABLE IF EXISTS checklist_templates;
-DROP TABLE IF EXISTS service_status_history;
-DROP TABLE IF EXISTS service_items;
-DROP TABLE IF EXISTS services;
-DROP TABLE IF EXISTS sale_items;
-DROP TABLE IF EXISTS sales;
-DROP TABLE IF EXISTS stock_movements;
-DROP TABLE IF EXISTS products;
-DROP TABLE IF EXISTS suppliers;
-DROP TABLE IF EXISTS customers;
-DROP TABLE IF EXISTS store_settings;
-DROP TABLE IF EXISTS users;
-
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   email VARCHAR(150) NOT NULL UNIQUE,
@@ -27,7 +13,7 @@ CREATE TABLE users (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE store_settings (
+CREATE TABLE IF NOT EXISTS store_settings (
   id INT PRIMARY KEY DEFAULT 1,
   store_name VARCHAR(150) NOT NULL DEFAULT 'Oren MacStore',
   tagline VARCHAR(150) DEFAULT 'Premium Apple Service & Products',
@@ -40,7 +26,7 @@ CREATE TABLE store_settings (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-CREATE TABLE customers (
+CREATE TABLE IF NOT EXISTS customers (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(150) NOT NULL,
   phone VARCHAR(30),
@@ -49,7 +35,7 @@ CREATE TABLE customers (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE suppliers (
+CREATE TABLE IF NOT EXISTS suppliers (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(150) NOT NULL,
   contact_person VARCHAR(150),
@@ -59,7 +45,7 @@ CREATE TABLE suppliers (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE products (
+CREATE TABLE IF NOT EXISTS products (
   id INT AUTO_INCREMENT PRIMARY KEY,
   sku VARCHAR(50) NOT NULL UNIQUE,
   name VARCHAR(150) NOT NULL,
@@ -74,7 +60,7 @@ CREATE TABLE products (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-CREATE TABLE stock_movements (
+CREATE TABLE IF NOT EXISTS stock_movements (
   id INT AUTO_INCREMENT PRIMARY KEY,
   product_id INT NOT NULL,
   supplier_id INT DEFAULT NULL,
@@ -90,7 +76,7 @@ CREATE TABLE stock_movements (
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
-CREATE TABLE sales (
+CREATE TABLE IF NOT EXISTS sales (
   id INT AUTO_INCREMENT PRIMARY KEY,
   invoice_no VARCHAR(30) NOT NULL UNIQUE,
   customer_id INT DEFAULT NULL,
@@ -106,7 +92,7 @@ CREATE TABLE sales (
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
-CREATE TABLE sale_items (
+CREATE TABLE IF NOT EXISTS sale_items (
   id INT AUTO_INCREMENT PRIMARY KEY,
   sale_id INT NOT NULL,
   product_id INT NOT NULL,
@@ -117,7 +103,7 @@ CREATE TABLE sale_items (
   FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
-CREATE TABLE services (
+CREATE TABLE IF NOT EXISTS services (
   id INT AUTO_INCREMENT PRIMARY KEY,
   ticket_no VARCHAR(30) NOT NULL UNIQUE,
   customer_id INT DEFAULT NULL,
@@ -144,7 +130,7 @@ CREATE TABLE services (
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
-CREATE TABLE service_status_history (
+CREATE TABLE IF NOT EXISTS service_status_history (
   id INT AUTO_INCREMENT PRIMARY KEY,
   service_id INT NOT NULL,
   status ENUM('menunggu_pengecekan', 'sedang_dikerjakan', 'menunggu_sparepart', 'selesai', 'diambil') NOT NULL,
@@ -155,7 +141,7 @@ CREATE TABLE service_status_history (
   FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
-CREATE TABLE service_items (
+CREATE TABLE IF NOT EXISTS service_items (
   id INT AUTO_INCREMENT PRIMARY KEY,
   service_id INT NOT NULL,
   product_id INT NOT NULL,
@@ -166,7 +152,7 @@ CREATE TABLE service_items (
 );
 
 -- Master checklist items, fully managed by Owner/Admin via Pengaturan (not hardcoded).
-CREATE TABLE checklist_templates (
+CREATE TABLE IF NOT EXISTS checklist_templates (
   id INT AUTO_INCREMENT PRIMARY KEY,
   category ENUM('kondisi_fisik', 'kelengkapan') NOT NULL,
   label VARCHAR(100) NOT NULL,
@@ -176,7 +162,7 @@ CREATE TABLE checklist_templates (
 );
 
 -- Snapshot of checklist answers filled in at intake time for a specific ticket.
-CREATE TABLE service_checklist_items (
+CREATE TABLE IF NOT EXISTS service_checklist_items (
   id INT AUTO_INCREMENT PRIMARY KEY,
   service_id INT NOT NULL,
   template_id INT DEFAULT NULL,
@@ -188,9 +174,4 @@ CREATE TABLE service_checklist_items (
   FOREIGN KEY (template_id) REFERENCES checklist_templates(id) ON DELETE SET NULL
 );
 
-CREATE INDEX idx_stock_movements_product ON stock_movements(product_id);
-CREATE INDEX idx_sale_items_sale ON sale_items(sale_id);
-CREATE INDEX idx_services_status ON services(status);
-CREATE INDEX idx_services_technician ON services(technician_id);
-CREATE INDEX idx_checklist_templates_category ON checklist_templates(category, sort_order);
-CREATE INDEX idx_service_checklist_items_service ON service_checklist_items(service_id);
+INSERT IGNORE INTO store_settings (id) VALUES (1);

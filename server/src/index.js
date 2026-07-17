@@ -2,6 +2,7 @@ require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
+const { ensureSchema } = require('./db/migrate');
 
 const app = express();
 app.use(cors());
@@ -39,4 +40,12 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`Oren MacStore server berjalan di http://localhost:${PORT}`));
+ensureSchema()
+  .then(() => {
+    console.log('Skema database sudah sinkron.');
+    app.listen(PORT, () => console.log(`Oren MacStore server berjalan di http://localhost:${PORT}`));
+  })
+  .catch((err) => {
+    console.error('Gagal menyinkronkan skema database:', err);
+    process.exit(1);
+  });
