@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { Mail, Lock, Loader2 } from 'lucide-vue-next';
 import { useAuthStore } from '../stores/auth';
+import { ROLE_LABELS } from '../lib/format';
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -11,6 +12,13 @@ const email = ref('arif@orenmacstore.id');
 const password = ref('');
 const loading = ref(false);
 const error = ref('');
+
+const DEMO_ACCOUNTS = [
+  { role: 'owner', email: 'arif@orenmacstore.id' },
+  { role: 'admin', email: 'siti@orenmacstore.id' },
+  { role: 'kasir', email: 'dedi@orenmacstore.id' },
+  { role: 'teknisi', email: 'yusuf@orenmacstore.id' },
+];
 
 async function submit() {
   error.value = '';
@@ -23,6 +31,12 @@ async function submit() {
   } finally {
     loading.value = false;
   }
+}
+
+function quickLogin(account) {
+  email.value = account.email;
+  password.value = 'password123';
+  submit();
 }
 </script>
 
@@ -61,9 +75,21 @@ async function submit() {
         </button>
       </form>
 
-      <p class="text-center text-xs text-neutral-400 mt-6">
-        Demo: arif@orenmacstore.id / siti@orenmacstore.id / dedi@orenmacstore.id / yusuf@orenmacstore.id — password: password123
-      </p>
+      <div class="mt-6">
+        <p class="text-center text-xs text-neutral-400 mb-2">Login cepat (akun demo)</p>
+        <div class="grid grid-cols-4 gap-2">
+          <button
+            v-for="acc in DEMO_ACCOUNTS"
+            :key="acc.role"
+            type="button"
+            class="btn-secondary text-xs !px-2"
+            :disabled="loading"
+            @click="quickLogin(acc)"
+          >
+            {{ ROLE_LABELS[acc.role] }}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>

@@ -260,9 +260,61 @@ async function addItem(req, res) {
   }
 }
 
+// Removes a sparepart line from a ticket and restores the stock it consumed.
+async function removeItem(req, res) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [items] = await conn.query('SELECT * FROM service_items WHERE id = ? AND service_id = ? FOR UPDATE', [req.params.itemId, req.params.id]);
+    const item = items[0];
+    if (!item) throw Object.assign(new Error('Sparepart tidak ditemukan'), { status: 404 });
+
+    await conn.query('UPDATE products SET stock_qty = stock_qty + ? WHERE id = ?', [item.qty, item.product_id]);
+    await conn.query('INSERT INTO stock_movements (product_id, type, qty, note, ref_type, ref_id, created_by) VALUES (?, "in", ?, "Batal sparepart service", "service", ?, ?)', [
+      item.product_id, item.qty, req.params.id, req.user.id,
+    ]);
+    await conn.query('DELETE FROM service_items WHERE id = ?', [req.params.itemId]);
+    await conn.commit();
+    const [remaining] = await pool.query('SELECT si.*, p.name AS product_name FROM service_items si JOIN products p ON p.id = si.product_id WHERE si.service_id = ?', [req.params.id]);
+    res.json(remaining);
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+// Deletes a ticket entirely, restoring stock for any sparepart it had consumed.
+// service_items / service_status_history / service_checklist_items cascade via FK.
+async function remove(req, res) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [existing] = await conn.query('SELECT id FROM services WHERE id = ? FOR UPDATE', [req.params.id]);
+    if (!existing[0]) throw Object.assign(new Error('Data service tidak ditemukan'), { status: 404 });
+
+    const [items] = await conn.query('SELECT product_id, qty FROM service_items WHERE service_id = ?', [req.params.id]);
+    for (const item of items) {
+      await conn.query('UPDATE products SET stock_qty = stock_qty + ? WHERE id = ?', [item.qty, item.product_id]);
+      await conn.query('INSERT INTO stock_movements (product_id, type, qty, note, ref_type, ref_id, created_by) VALUES (?, "in", ?, "Hapus tiket service", "service", ?, ?)', [
+        item.product_id, item.qty, req.params.id, req.user.id,
+      ]);
+    }
+    await conn.query('DELETE FROM services WHERE id = ?', [req.params.id]);
+    await conn.commit();
+    res.status(204).end();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
 async function technicians(req, res) {
   const [rows] = await pool.query("SELECT id, name FROM users WHERE role = 'teknisi' AND is_active = 1 ORDER BY name ASC");
   res.json(rows);
 }
 
-module.exports = { list, get, getPublicStatus, create, update, updateChecklist, updateStatus, addItem, technicians };
+module.exports = { list, get, getPublicStatus, create, update, updateChecklist, updateStatus, addItem, removeItem, remove, technicians };

@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import {
-  LayoutGrid, Box, PackagePlus, ShoppingCart, Laptop2, Users, Truck, BarChart3, Settings, ChevronRight,
+  LayoutGrid, Laptop, PackageSearch, PackagePlus, ShoppingCart, Laptop2, Users, Truck, BarChart3, Settings, ChevronRight,
 } from 'lucide-vue-next';
 import { useAuthStore } from '../stores/auth';
 import logo from '../assets/logo.png';
@@ -12,7 +12,8 @@ const auth = useAuthStore();
 
 const allItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutGrid },
-  { to: '/stok-barang', label: 'Stok Barang', icon: Box, roles: ['owner', 'admin', 'kasir'] },
+  { to: '/stock-macbook', label: 'Stock MacBook', icon: Laptop, roles: ['owner', 'admin', 'kasir'] },
+  { to: '/part-macbook', label: 'Part MacBook', icon: PackageSearch, roles: ['owner', 'admin', 'kasir'] },
   { to: '/barang-masuk', label: 'Barang Masuk', icon: PackagePlus, roles: ['owner', 'admin', 'kasir'] },
   { to: '/penjualan', label: 'Penjualan', icon: ShoppingCart, roles: ['owner', 'admin', 'kasir'] },
   { to: '/service-macbook', label: 'Service MacBook', icon: Laptop2, roles: ['owner', 'admin', 'kasir', 'teknisi'] },

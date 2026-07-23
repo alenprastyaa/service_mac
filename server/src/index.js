@@ -10,6 +10,7 @@ app.use(express.json());
 
 app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/products', require('./routes/products.routes'));
+app.use('/api/macbooks', require('./routes/macbooks.routes'));
 app.use('/api/stock-movements', require('./routes/stockMovements.routes'));
 app.use('/api/customers', require('./routes/customers.routes'));
 app.use('/api/suppliers', require('./routes/suppliers.routes'));
@@ -36,7 +37,8 @@ app.get(/^\/(?!api).*/, (req, res) => {
 // Error handler
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(err.status || 500).json({ error: err.message || 'Terjadi kesalahan pada server' });
+  const status = err.name === 'MulterError' || /harus berupa gambar/.test(err.message || '') ? 400 : err.status || 500;
+  res.status(status).json({ error: err.message || 'Terjadi kesalahan pada server' });
 });
 
 const PORT = process.env.PORT || 4000;

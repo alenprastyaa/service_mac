@@ -12,7 +12,8 @@ const routes = [
     children: [
       { path: '', redirect: '/dashboard' },
       { path: 'dashboard', name: 'dashboard', component: () => import('../views/Dashboard.vue') },
-      { path: 'stok-barang', name: 'stok-barang', component: () => import('../views/StokBarang.vue'), meta: { roles: ['owner', 'admin', 'kasir'] } },
+      { path: 'stock-macbook', name: 'stock-macbook', component: () => import('../views/StockMacbook.vue'), meta: { roles: ['owner', 'admin', 'kasir'] } },
+      { path: 'part-macbook', name: 'part-macbook', component: () => import('../views/PartMacbook.vue'), meta: { roles: ['owner', 'admin', 'kasir'] } },
       { path: 'barang-masuk', name: 'barang-masuk', component: () => import('../views/BarangMasuk.vue'), meta: { roles: ['owner', 'admin', 'kasir'] } },
       { path: 'penjualan', name: 'penjualan', component: () => import('../views/Penjualan.vue'), meta: { roles: ['owner', 'admin', 'kasir'] } },
       { path: 'service-macbook', name: 'service-macbook', component: () => import('../views/ServiceMacBook.vue'), meta: { roles: roles4 } },

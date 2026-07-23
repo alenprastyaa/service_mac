@@ -12,6 +12,12 @@ async function summary(req, res) {
   const [[yesterdaySales]] = await pool.query(
     "SELECT COALESCE(SUM(total), 0) AS total FROM sales WHERE DATE(created_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY) AND status != 'dibatalkan'"
   );
+  const [[monthSales]] = await pool.query(
+    "SELECT COALESCE(SUM(total), 0) AS total FROM sales WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE()) AND status != 'dibatalkan'"
+  );
+  const [[lastMonthSales]] = await pool.query(
+    "SELECT COALESCE(SUM(total), 0) AS total FROM sales WHERE MONTH(created_at) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) AND YEAR(created_at) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) AND status != 'dibatalkan'"
+  );
 
   const [[monthProfit]] = await pool.query(
     `SELECT COALESCE(SUM((si.price - p.purchase_price) * si.qty), 0) AS profit
@@ -28,7 +34,8 @@ async function summary(req, res) {
      WHERE MONTH(s.created_at) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) AND YEAR(s.created_at) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) AND s.status != 'dibatalkan'`
   );
 
-  const [[stock]] = await pool.query('SELECT COALESCE(SUM(stock_qty), 0) AS total_units, SUM(CASE WHEN stock_qty <= min_stock THEN 1 ELSE 0 END) AS low_stock_count FROM products');
+  const [[sparepartStock]] = await pool.query('SELECT COALESCE(SUM(stock_qty), 0) AS total_units, SUM(CASE WHEN stock_qty <= min_stock THEN 1 ELSE 0 END) AS low_stock_count FROM products');
+  const [[macbookStock]] = await pool.query("SELECT COUNT(*) AS total_units FROM macbooks WHERE status = 'ready'");
 
   const [[serviceStats]] = await pool.query(
     `SELECT
@@ -36,7 +43,9 @@ async function summary(req, res) {
        SUM(CASE WHEN status = 'menunggu_sparepart' THEN 1 ELSE 0 END) AS waiting_sparepart,
        SUM(CASE WHEN status = 'menunggu_pengecekan' THEN 1 ELSE 0 END) AS menunggu_pengecekan,
        SUM(CASE WHEN status = 'sedang_dikerjakan' THEN 1 ELSE 0 END) AS sedang_dikerjakan,
-       SUM(CASE WHEN status = 'selesai' THEN 1 ELSE 0 END) AS selesai
+       SUM(CASE WHEN status = 'selesai' THEN 1 ELSE 0 END) AS selesai,
+       SUM(CASE WHEN DATE(received_at) = CURDATE() THEN 1 ELSE 0 END) AS masuk_today,
+       SUM(CASE WHEN DATE(completed_at) = CURDATE() AND status IN ('selesai', 'diambil') THEN 1 ELSE 0 END) AS selesai_today
      FROM services`
   );
 
@@ -57,12 +66,17 @@ async function summary(req, res) {
   );
 
   res.json({
-    total_sales_today: Number(todaySales.total),
-    sales_today_change_pct: await pctChange(Number(todaySales.total), Number(yesterdaySales.total)),
-    total_profit_month: Number(monthProfit.profit),
-    profit_month_change_pct: await pctChange(Number(monthProfit.profit), Number(lastMonthProfit.profit)),
-    total_stock_units: Number(stock.total_units),
-    low_stock_count: Number(stock.low_stock_count),
+    omzet_today: Number(todaySales.total),
+    omzet_today_change_pct: await pctChange(Number(todaySales.total), Number(yesterdaySales.total)),
+    omzet_month: Number(monthSales.total),
+    omzet_month_change_pct: await pctChange(Number(monthSales.total), Number(lastMonthSales.total)),
+    gross_profit_month: Number(monthProfit.profit),
+    gross_profit_month_change_pct: await pctChange(Number(monthProfit.profit), Number(lastMonthProfit.profit)),
+    total_macbook_stock: Number(macbookStock.total_units),
+    total_sparepart_stock: Number(sparepartStock.total_units),
+    low_stock_count: Number(sparepartStock.low_stock_count),
+    service_masuk_today: Number(serviceStats.masuk_today) || 0,
+    service_selesai_today: Number(serviceStats.selesai_today) || 0,
     active_service_count: Number(serviceStats.active_count) || 0,
     waiting_sparepart_count: Number(serviceStats.waiting_sparepart) || 0,
     service_status_breakdown: {

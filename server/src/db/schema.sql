@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS sale_items;
 DROP TABLE IF EXISTS sales;
 DROP TABLE IF EXISTS stock_movements;
 DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS macbooks;
 DROP TABLE IF EXISTS suppliers;
 DROP TABLE IF EXISTS customers;
 DROP TABLE IF EXISTS store_settings;
@@ -72,6 +73,27 @@ CREATE TABLE products (
   unit VARCHAR(20) NOT NULL DEFAULT 'unit',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE macbooks (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  photo_path VARCHAR(255) DEFAULT NULL,
+  model_name VARCHAR(150) NOT NULL,
+  chip VARCHAR(50),
+  ram VARCHAR(20),
+  storage VARCHAR(20),
+  color VARCHAR(50),
+  battery_pct TINYINT UNSIGNED NOT NULL DEFAULT 100,
+  cycle_count INT UNSIGNED NOT NULL DEFAULT 0,
+  serial_number VARCHAR(100),
+  modal_price DECIMAL(14,2) NOT NULL DEFAULT 0,
+  jual_price DECIMAL(14,2) NOT NULL DEFAULT 0,
+  status ENUM('ready', 'terjual', 'service') NOT NULL DEFAULT 'ready',
+  notes VARCHAR(255),
+  created_by INT DEFAULT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE stock_movements (
@@ -188,6 +210,7 @@ CREATE TABLE service_checklist_items (
   FOREIGN KEY (template_id) REFERENCES checklist_templates(id) ON DELETE SET NULL
 );
 
+CREATE INDEX idx_macbooks_status ON macbooks(status);
 CREATE INDEX idx_stock_movements_product ON stock_movements(product_id);
 CREATE INDEX idx_sale_items_sale ON sale_items(sale_id);
 CREATE INDEX idx_services_status ON services(status);

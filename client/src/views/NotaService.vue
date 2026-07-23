@@ -1,13 +1,16 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import QRCode from 'qrcode';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import {
   MapPin, Phone, Globe, Instagram, User, Info, Laptop2, AlertCircle, Monitor, PackageCheck,
-  Lock, Eye, EyeOff, Clock, ShieldCheck, Sparkles, Printer, ArrowLeft, CheckCircle2,
+  Lock, Eye, EyeOff, Clock, ShieldCheck, Sparkles, Download, ArrowLeft, CheckCircle2,
 } from 'lucide-vue-next';
 import api from '../lib/api';
 import { formatDate, CHECKLIST_STATUS_LABELS, CHECKLIST_STATUS_STYLES } from '../lib/format';
+import logo from '../assets/logo.png';
 
 const route = useRoute();
 const router = useRouter();
@@ -18,6 +21,10 @@ const loading = ref(true);
 const showPassword = ref(false);
 const qrDataUrl = ref('');
 const checkUrl = ref('');
+const notaRef = ref(null);
+const downloading = ref(false);
+const downloadError = ref('');
+const isCapturing = ref(false);
 
 const statusPillClass = {
   baik: 'bg-emerald-50 text-emerald-600',
@@ -49,8 +56,43 @@ function maskedPassword(pwd) {
   return showPassword.value ? pwd : '•'.repeat(Math.max(pwd.length, 6));
 }
 
-function printNota() {
-  window.print();
+// Renders the nota DOM to an image and lays it into an A4 PDF, so the download
+// matches the on-screen design exactly instead of relying on the browser's
+// print CSS (which renders inconsistently across browsers).
+async function downloadPdf() {
+  downloading.value = true;
+  downloadError.value = '';
+  isCapturing.value = true;
+  try {
+    await nextTick();
+    const canvas = await html2canvas(notaRef.value, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+    const imgData = canvas.toDataURL('image/png');
+
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pageWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position = 0;
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+
+    while (heightLeft > 0) {
+      position -= pageHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+
+    pdf.save(`Nota-${service.value.ticket_no}.pdf`);
+  } catch (err) {
+    downloadError.value = 'Gagal membuat PDF, silakan coba lagi.';
+  } finally {
+    downloading.value = false;
+    isCapturing.value = false;
+  }
 }
 
 onMounted(load);
@@ -58,23 +100,20 @@ onMounted(load);
 
 <template>
   <div class="pt-2 pb-10">
-    <div class="no-print flex items-center justify-between mb-4 max-w-[820px] mx-auto">
+    <div class="no-print flex items-center justify-between mb-2 max-w-[820px] mx-auto">
       <button class="btn-secondary" @click="router.back()"><ArrowLeft :size="16" /> Kembali</button>
-      <button class="btn-primary" :disabled="loading" @click="printNota"><Printer :size="16" /> Cetak Nota</button>
+      <button class="btn-primary" :disabled="loading || downloading" @click="downloadPdf">
+        <Download :size="16" /> {{ downloading ? 'Membuat PDF...' : 'Download PDF' }}
+      </button>
     </div>
+    <p v-if="downloadError" class="no-print text-sm text-red-500 text-right max-w-[820px] mx-auto mb-2">{{ downloadError }}</p>
 
     <div v-if="loading" class="text-center py-20 text-sm text-neutral-400">Memuat nota...</div>
 
-    <div v-else class="nota-page mx-auto rounded-2xl shadow-card border border-neutral-100 p-8 text-neutral-900">
+    <div v-else ref="notaRef" class="nota-page mx-auto rounded-2xl shadow-card border border-neutral-100 p-8 text-neutral-900">
       <!-- Header -->
       <div class="flex items-start justify-between flex-wrap gap-4 pb-5 border-b border-neutral-200">
-        <div class="flex items-center gap-3">
-          <div class="w-16 h-16 rounded-2xl bg-brand-500 flex items-center justify-center text-white text-3xl font-bold shrink-0">O</div>
-          <div>
-            <p class="text-2xl font-bold leading-tight"><span class="text-brand-500">Oren</span> MacStore</p>
-            <p class="text-xs text-neutral-500 flex items-center gap-1 mt-0.5"> {{ store.tagline }}</p>
-          </div>
-        </div>
+        <img :src="logo" alt="Oren MacStore" class="h-16 w-auto object-contain" />
         <div class="text-right">
           <h1 class="text-xl font-bold leading-tight">NOTA PENERIMAAN<br />SERVICE MACBOOK</h1>
           <span class="badge bg-brand-50 text-brand-600 font-semibold mt-2"># {{ service.ticket_no }}</span>
@@ -129,7 +168,7 @@ onMounted(load);
                 <dt class="w-20 shrink-0">Password</dt>
                 <dd class="flex items-center gap-1.5 flex-wrap">
                   <span>: {{ maskedPassword(service.device_password) }}</span>
-                  <button v-if="service.device_password" class="no-print text-neutral-400 hover:text-brand-500" @click="showPassword = !showPassword">
+                  <button v-if="service.device_password && !isCapturing" class="no-print text-neutral-400 hover:text-brand-500" @click="showPassword = !showPassword">
                     <component :is="showPassword ? EyeOff : Eye" :size="12" />
                   </button>
                   <span v-if="service.device_password" class="inline-flex items-center gap-0.5 text-emerald-600 whitespace-nowrap"><Lock :size="10" />Tersimpan Aman</span>

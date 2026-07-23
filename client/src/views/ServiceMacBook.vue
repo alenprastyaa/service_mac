@@ -1,15 +1,17 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Plus, Search, Laptop2, Wrench, UserPlus, Users, Printer, Monitor, PackageCheck } from 'lucide-vue-next';
+import { Plus, Search, Laptop2, Wrench, UserPlus, Users, Printer, Monitor, PackageCheck, Trash2, Pencil, X } from 'lucide-vue-next';
 import api from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import Modal from '../components/Modal.vue';
+import ConfirmDialog from '../components/ConfirmDialog.vue';
 import StatusBadge from '../components/StatusBadge.vue';
 import EmptyState from '../components/EmptyState.vue';
 import { formatCurrency, formatDateTime, KONDISI_FISIK_OPTIONS, KELENGKAPAN_OPTIONS } from '../lib/format';
 
 const auth = useAuthStore();
 const canCreate = computed(() => auth.can('owner', 'admin', 'kasir'));
+const canDelete = computed(() => auth.can('owner', 'admin'));
 
 const tickets = ref([]);
 const customers = ref([]);
@@ -102,6 +104,14 @@ const sparepartForm = ref({ product_id: '', qty: 1 });
 const detailSaving = ref(false);
 const detailError = ref('');
 
+const editDeviceMode = ref(false);
+const deviceForm = ref(emptyDeviceForm());
+const deleting = ref(null);
+
+function emptyDeviceForm() {
+  return { device_model: '', model_number: '', serial_number: '', device_color: '', device_storage: '', complaint: '', estimated_cost: 0, checkup_estimate: '', device_password: '' };
+}
+
 async function openDetail(ticket) {
   if (!technicians.value.length) technicians.value = (await api.get('/services/technicians')).data;
   if (!products.value.length) products.value = (await api.get('/products')).data;
@@ -114,7 +124,30 @@ async function loadDetail(id) {
   detail.value = data;
   statusForm.value = { status: data.status, note: '', final_cost: Number(data.final_cost) || 0 };
   diagnosisForm.value = { diagnosis: data.diagnosis || '', technician_id: data.technician_id || '' };
+  deviceForm.value = {
+    device_model: data.device_model, model_number: data.model_number || '', serial_number: data.serial_number || '',
+    device_color: data.device_color || '', device_storage: data.device_storage || '', complaint: data.complaint,
+    estimated_cost: Number(data.estimated_cost) || 0, checkup_estimate: data.checkup_estimate || '', device_password: '',
+  };
+  editDeviceMode.value = false;
   detailError.value = '';
+}
+
+async function saveDeviceInfo() {
+  detailSaving.value = true;
+  detailError.value = '';
+  try {
+    const payload = { ...deviceForm.value };
+    if (!payload.device_password) delete payload.device_password;
+    await api.put(`/services/${detail.value.id}`, payload);
+    editDeviceMode.value = false;
+    await loadDetail(detail.value.id);
+    await loadTickets();
+  } catch (err) {
+    detailError.value = err.response?.data?.error || 'Gagal menyimpan info perangkat';
+  } finally {
+    detailSaving.value = false;
+  }
 }
 
 async function saveDiagnosis() {
@@ -157,6 +190,26 @@ async function addSparepart() {
   } finally {
     detailSaving.value = false;
   }
+}
+
+async function removeSparepart(item) {
+  detailSaving.value = true;
+  detailError.value = '';
+  try {
+    await api.delete(`/services/${detail.value.id}/items/${item.id}`);
+    await loadDetail(detail.value.id);
+  } catch (err) {
+    detailError.value = err.response?.data?.error || 'Gagal menghapus sparepart';
+  } finally {
+    detailSaving.value = false;
+  }
+}
+
+async function confirmDeleteTicket() {
+  await api.delete(`/services/${deleting.value.id}`);
+  deleting.value = null;
+  showDetail.value = false;
+  await loadTickets();
 }
 
 onMounted(loadTickets);
@@ -202,6 +255,7 @@ onMounted(loadTickets);
               <th class="px-2 py-2 font-medium">Teknisi</th>
               <th class="px-2 py-2 font-medium">Diterima</th>
               <th class="px-2 py-2 font-medium">Status</th>
+              <th v-if="canDelete" class="px-2 py-2 font-medium text-right">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -217,6 +271,11 @@ onMounted(loadTickets);
               <td class="px-2 py-3 text-neutral-500">{{ t.technician_name || 'Belum ditugaskan' }}</td>
               <td class="px-2 py-3 text-neutral-500">{{ formatDateTime(t.received_at) }}</td>
               <td class="px-2 py-3"><StatusBadge :status="t.status" /></td>
+              <td v-if="canDelete" class="px-2 py-3 text-right">
+                <button class="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-950 text-red-500" @click.stop="deleting = t">
+                  <Trash2 :size="15" />
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -322,72 +381,124 @@ onMounted(loadTickets);
     </Modal>
 
     <!-- Detail Modal -->
-    <Modal v-if="showDetail && detail" :title="`Tiket ${detail.ticket_no}`" size="lg" @close="showDetail = false">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="space-y-4">
-          <div class="text-sm space-y-1">
-            <p><span class="text-neutral-500">Pelanggan:</span> {{ detail.customer_name || '-' }} ({{ detail.customer_phone || '-' }})</p>
-            <p><span class="text-neutral-500">Perangkat:</span> {{ detail.device_model }} <span v-if="detail.serial_number">· {{ detail.serial_number }}</span></p>
-            <p><span class="text-neutral-500">Keluhan:</span> {{ detail.complaint }}</p>
-            <p><span class="text-neutral-500">Diterima:</span> {{ formatDateTime(detail.received_at) }}</p>
-            <p class="flex items-center gap-2"><span class="text-neutral-500">Status:</span> <StatusBadge :status="detail.status" /></p>
+    <Modal v-if="showDetail && detail" :title="`Tiket ${detail.ticket_no}`" size="xl" @close="showDetail = false">
+      <div class="space-y-4">
+        <!-- Info perangkat -->
+        <div class="rounded-xl border border-neutral-200 dark:border-neutral-800 p-4">
+          <div v-if="!editDeviceMode">
+            <div class="flex items-start justify-between gap-2 mb-3">
+              <h4 class="font-medium text-sm flex items-center gap-2"><Laptop2 :size="15" class="text-brand-500" /> Info Perangkat</h4>
+              <div class="flex items-center gap-3 shrink-0">
+                <StatusBadge :status="detail.status" />
+                <button v-if="canCreate" class="text-xs font-medium text-brand-500 flex items-center gap-1" @click="editDeviceMode = true">
+                  <Pencil :size="12" /> Edit
+                </button>
+              </div>
+            </div>
+            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 text-sm">
+              <div><dt class="text-xs text-neutral-400">Pelanggan</dt><dd>{{ detail.customer_name || '-' }} <span v-if="detail.customer_phone" class="text-neutral-400">({{ detail.customer_phone }})</span></dd></div>
+              <div><dt class="text-xs text-neutral-400">Perangkat</dt><dd>{{ detail.device_model }} <span v-if="detail.model_number" class="text-neutral-400">· {{ detail.model_number }}</span></dd></div>
+              <div><dt class="text-xs text-neutral-400">Serial Number</dt><dd class="font-mono">{{ detail.serial_number || '-' }}</dd></div>
+              <div><dt class="text-xs text-neutral-400">Warna / Storage</dt><dd>{{ detail.device_color || '-' }} · {{ detail.device_storage || '-' }}</dd></div>
+              <div class="sm:col-span-2"><dt class="text-xs text-neutral-400">Keluhan</dt><dd>{{ detail.complaint }}</dd></div>
+              <div><dt class="text-xs text-neutral-400">Estimasi Biaya</dt><dd>{{ formatCurrency(detail.estimated_cost) }}</dd></div>
+              <div><dt class="text-xs text-neutral-400">Diterima</dt><dd>{{ formatDateTime(detail.received_at) }}</dd></div>
+            </dl>
           </div>
 
-          <router-link :to="`/service-macbook/${detail.id}/nota`" class="btn-secondary text-xs w-full"><Printer :size="14" /> Cetak Nota Penerimaan</router-link>
+          <form v-else @submit.prevent="saveDeviceInfo" class="space-y-2.5">
+            <div class="flex items-center justify-between mb-1">
+              <h4 class="font-medium text-sm">Edit Info Perangkat</h4>
+              <button type="button" class="text-neutral-400 hover:text-neutral-600" @click="editDeviceMode = false"><X :size="16" /></button>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <input v-model="deviceForm.device_model" required placeholder="Model perangkat" class="input text-sm col-span-2" />
+              <input v-model="deviceForm.model_number" placeholder="Model number" class="input text-sm" />
+              <input v-model="deviceForm.serial_number" placeholder="Serial number" class="input text-sm" />
+              <input v-model="deviceForm.device_color" placeholder="Warna" class="input text-sm" />
+              <input v-model="deviceForm.device_storage" placeholder="Storage / RAM" class="input text-sm" />
+            </div>
+            <textarea v-model="deviceForm.complaint" required rows="2" placeholder="Keluhan" class="input text-sm"></textarea>
+            <div class="grid grid-cols-2 gap-2">
+              <input v-model.number="deviceForm.estimated_cost" type="number" min="0" placeholder="Estimasi biaya" class="input text-sm" />
+              <input v-model="deviceForm.checkup_estimate" placeholder="Estimasi pengecekan" class="input text-sm" />
+            </div>
+            <input v-model="deviceForm.device_password" placeholder="Password baru (kosongkan jika tidak diubah)" class="input text-sm" />
+            <div class="flex justify-end gap-2">
+              <button type="button" class="btn-secondary text-xs" @click="editDeviceMode = false">Batal</button>
+              <button type="submit" class="btn-primary text-xs" :disabled="detailSaving">Simpan</button>
+            </div>
+          </form>
+        </div>
 
-          <div class="border-t border-neutral-100 dark:border-neutral-800 pt-4 space-y-3">
+        <!-- Aksi -->
+        <div class="flex gap-2">
+          <router-link :to="`/service-macbook/${detail.id}/nota`" class="btn-secondary text-xs flex-1"><Printer :size="14" /> Cetak Nota Penerimaan</router-link>
+          <button v-if="canDelete" class="btn-danger text-xs flex-1" @click="deleting = detail"><Trash2 :size="14" /> Hapus Tiket</button>
+        </div>
+
+        <p v-if="detailError" class="text-sm text-red-500">{{ detailError }}</p>
+
+        <!-- Alur kerja -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="rounded-xl border border-neutral-200 dark:border-neutral-800 p-4 space-y-3">
             <h4 class="font-medium text-sm">Diagnosis &amp; Teknisi</h4>
-            <textarea v-model="diagnosisForm.diagnosis" rows="2" class="input" placeholder="Hasil pengecekan / diagnosis..."></textarea>
-            <select v-model="diagnosisForm.technician_id" class="input">
+            <textarea v-model="diagnosisForm.diagnosis" rows="2" class="input text-sm" placeholder="Hasil pengecekan / diagnosis..."></textarea>
+            <select v-model="diagnosisForm.technician_id" class="input text-sm">
               <option value="">Belum ditugaskan</option>
               <option v-for="t in technicians" :key="t.id" :value="t.id">{{ t.name }}</option>
             </select>
-            <button class="btn-secondary text-xs" :disabled="detailSaving" @click="saveDiagnosis">Simpan Diagnosis</button>
+            <button class="btn-secondary text-xs w-full" :disabled="detailSaving" @click="saveDiagnosis">Simpan Diagnosis</button>
           </div>
 
-          <div class="border-t border-neutral-100 dark:border-neutral-800 pt-4 space-y-3">
+          <div class="rounded-xl border border-neutral-200 dark:border-neutral-800 p-4 space-y-3">
             <h4 class="font-medium text-sm">Ubah Status</h4>
-            <select v-model="statusForm.status" class="input">
+            <select v-model="statusForm.status" class="input text-sm">
               <option value="menunggu_pengecekan">Menunggu Pengecekan</option>
               <option value="sedang_dikerjakan">Sedang Dikerjakan</option>
               <option value="menunggu_sparepart">Menunggu Sparepart</option>
               <option value="selesai">Selesai</option>
               <option value="diambil">Sudah Diambil</option>
             </select>
-            <input v-if="statusForm.status === 'selesai' || statusForm.status === 'diambil'" v-model.number="statusForm.final_cost" type="number" min="0" class="input" placeholder="Biaya akhir (Rp)" />
-            <input v-model="statusForm.note" class="input" placeholder="Catatan (opsional)" />
-            <button class="btn-primary text-xs" :disabled="detailSaving" @click="saveStatus">Update Status</button>
+            <input v-if="statusForm.status === 'selesai' || statusForm.status === 'diambil'" v-model.number="statusForm.final_cost" type="number" min="0" class="input text-sm" placeholder="Biaya akhir (Rp)" />
+            <input v-model="statusForm.note" class="input text-sm" placeholder="Catatan (opsional)" />
+            <button class="btn-primary text-xs w-full" :disabled="detailSaving" @click="saveStatus">Update Status</button>
           </div>
-
-          <p v-if="detailError" class="text-sm text-red-500">{{ detailError }}</p>
         </div>
 
-        <div class="space-y-6">
-          <div>
+        <!-- Sparepart & riwayat -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="rounded-xl border border-neutral-200 dark:border-neutral-800 p-4">
             <h4 class="font-medium text-sm mb-3 flex items-center gap-2"><Wrench :size="15" class="text-brand-500" /> Sparepart Digunakan</h4>
             <div v-if="detail.items?.length" class="space-y-1.5 mb-3 text-sm">
-              <div v-for="it in detail.items" :key="it.id" class="flex justify-between">
-                <span>{{ it.product_name }} × {{ it.qty }}</span>
-                <span class="text-neutral-500">{{ formatCurrency(it.price * it.qty) }}</span>
+              <div v-for="it in detail.items" :key="it.id" class="flex items-center justify-between gap-2">
+                <span class="min-w-0 truncate">{{ it.product_name }} × {{ it.qty }}</span>
+                <div class="flex items-center gap-2 shrink-0">
+                  <span class="text-neutral-500">{{ formatCurrency(it.price * it.qty) }}</span>
+                  <button v-if="canCreate" class="text-neutral-400 hover:text-red-500" :disabled="detailSaving" @click="removeSparepart(it)">
+                    <Trash2 :size="13" />
+                  </button>
+                </div>
               </div>
             </div>
             <p v-else class="text-xs text-neutral-400 mb-3">Belum ada sparepart digunakan.</p>
             <div class="flex gap-2">
-              <select v-model="sparepartForm.product_id" class="input text-sm">
+              <select v-model="sparepartForm.product_id" class="input text-sm flex-1 min-w-0">
                 <option value="" disabled>Pilih produk</option>
                 <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }} (stok {{ p.stock_qty }})</option>
               </select>
-              <input v-model.number="sparepartForm.qty" type="number" min="1" class="input text-sm w-20" />
+              <input v-model.number="sparepartForm.qty" type="number" min="1" class="input text-sm w-16 shrink-0" />
               <button class="btn-secondary text-xs shrink-0" :disabled="detailSaving" @click="addSparepart">Tambah</button>
             </div>
           </div>
 
-          <div>
+          <div class="rounded-xl border border-neutral-200 dark:border-neutral-800 p-4">
             <h4 class="font-medium text-sm mb-3">Riwayat Status</h4>
-            <div class="space-y-3">
+            <EmptyState v-if="!detail.history?.length" message="Belum ada riwayat status." />
+            <div v-else class="space-y-3 max-h-64 overflow-y-auto">
               <div v-for="h in detail.history" :key="h.id" class="flex gap-3 text-sm">
                 <div class="w-2 h-2 rounded-full bg-brand-500 mt-1.5 shrink-0"></div>
-                <div>
+                <div class="min-w-0">
                   <p class="font-medium"><StatusBadge :status="h.status" /></p>
                   <p class="text-xs text-neutral-400">{{ formatDateTime(h.changed_at) }} · {{ h.changed_by_name || 'Sistem' }}</p>
                   <p v-if="h.note" class="text-xs text-neutral-500 mt-0.5">{{ h.note }}</p>
@@ -398,5 +509,13 @@ onMounted(loadTickets);
         </div>
       </div>
     </Modal>
+
+    <ConfirmDialog
+      v-if="deleting"
+      title="Hapus Tiket Service"
+      :message="`Yakin ingin menghapus tiket '${deleting.ticket_no}'? Sparepart yang sudah dipakai akan dikembalikan ke stok. Tindakan ini tidak dapat dibatalkan.`"
+      @confirm="confirmDeleteTicket"
+      @cancel="deleting = null"
+    />
   </div>
 </template>

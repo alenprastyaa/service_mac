@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const DB_NAME = process.env.DB_NAME || 'oren_macstore';
 
 const INDEXES = [
+  'CREATE INDEX idx_macbooks_status ON macbooks(status)',
   'CREATE INDEX idx_stock_movements_product ON stock_movements(product_id)',
   'CREATE INDEX idx_sale_items_sale ON sale_items(sale_id)',
   'CREATE INDEX idx_services_status ON services(status)',
