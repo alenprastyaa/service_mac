@@ -5,7 +5,13 @@ import api from '../lib/api';
 import Modal from '../components/Modal.vue';
 import StatusBadge from '../components/StatusBadge.vue';
 import EmptyState from '../components/EmptyState.vue';
+import ConfirmDialog from '../components/ConfirmDialog.vue';
 import { formatCurrency, formatDateTime } from '../lib/format';
+import { useAuthStore } from '../stores/auth';
+
+const auth = useAuthStore();
+const canDelete = computed(() => auth.can('owner'));
+const deleting = ref(null);
 
 const sales = ref([]);
 const loading = ref(true);
@@ -108,6 +114,13 @@ async function openDetail(sale) {
   showDetail.value = true;
 }
 
+async function confirmDelete() {
+  await api.delete(`/sales/${deleting.value.id}`);
+  deleting.value = null;
+  showDetail.value = false;
+  await loadSales();
+}
+
 onMounted(loadSales);
 </script>
 
@@ -151,6 +164,7 @@ onMounted(loadSales);
               <td class="px-2 py-3"><StatusBadge :status="s.status" /></td>
               <td class="px-2 py-3 text-right">
                 <button class="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500" @click="openDetail(s)"><Eye :size="15" /></button>
+                <button v-if="canDelete" class="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-950 text-red-500" @click="deleting = s"><Trash2 :size="15" /></button>
               </td>
             </tr>
           </tbody>
@@ -269,6 +283,17 @@ onMounted(loadSales);
         <div class="flex justify-between text-neutral-500"><span>Diskon</span><span>-{{ formatCurrency(detail.discount) }}</span></div>
         <div class="flex justify-between font-semibold text-base"><span>Total</span><span>{{ formatCurrency(detail.total) }}</span></div>
       </div>
+      <div v-if="canDelete" class="flex justify-end mt-4">
+        <button class="btn-danger" @click="deleting = detail"><Trash2 :size="15" /> Hapus Transaksi</button>
+      </div>
     </Modal>
+
+    <ConfirmDialog
+      v-if="deleting"
+      title="Hapus Transaksi"
+      :message="`Yakin ingin menghapus transaksi '${deleting.invoice_no}'? Stok produk terkait akan dikembalikan.`"
+      @confirm="confirmDelete"
+      @cancel="deleting = null"
+    />
   </div>
 </template>

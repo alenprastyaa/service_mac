@@ -106,4 +106,31 @@ async function updateStatus(req, res) {
   res.json(rows[0]);
 }
 
-module.exports = { list, get, create, updateStatus };
+// Deletes a sale entirely, restoring stock for any product it consumed.
+// sale_items cascades via FK.
+async function remove(req, res) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [existing] = await conn.query('SELECT invoice_no FROM sales WHERE id = ? FOR UPDATE', [req.params.id]);
+    if (!existing[0]) throw Object.assign(new Error('Transaksi tidak ditemukan'), { status: 404 });
+
+    const [items] = await conn.query('SELECT product_id, qty FROM sale_items WHERE sale_id = ?', [req.params.id]);
+    for (const item of items) {
+      await conn.query('UPDATE products SET stock_qty = stock_qty + ? WHERE id = ?', [item.qty, item.product_id]);
+      await conn.query('INSERT INTO stock_movements (product_id, type, qty, note, ref_type, ref_id, created_by) VALUES (?, "in", ?, ?, "sale", ?, ?)', [
+        item.product_id, item.qty, `Hapus transaksi ${existing[0].invoice_no}`, req.params.id, req.user.id,
+      ]);
+    }
+    await conn.query('DELETE FROM sales WHERE id = ?', [req.params.id]);
+    await conn.commit();
+    res.status(204).end();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+module.exports = { list, get, create, updateStatus, remove };

@@ -1,0 +1,1 @@
+import{o as e,c as a,t as s}from"./index-shtPGP-x.js";const r={class:"text-center py-12 text-sm text-neutral-400"},m={__name:"EmptyState",props:{message:{type:String,default:"Belum ada data."}},setup(t){return(c,n)=>(e(),a("div",r,s(t.message),1))}};export{m as _};
