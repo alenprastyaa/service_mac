@@ -1,62 +1,47 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-import { Printer, Download, MessageCircle, CheckCircle2 } from 'lucide-vue-next';
+import { Download, MessageCircle, CheckCircle2 } from 'lucide-vue-next';
 import Modal from './Modal.vue';
 import NotaServiceThermal from './NotaServiceThermal.vue';
 import NotaServiceA4 from './NotaServiceA4.vue';
 import { normalizeWaPhone, openServiceWhatsApp } from '../lib/whatsapp';
 import { useServiceNota } from '../lib/useServiceNota';
+import { downloadElementAsFittedPdf, downloadElementAsA4Pdf } from '../lib/pdf';
 
 const props = defineProps({ serviceId: { type: [Number, String], required: true } });
 const emit = defineEmits(['close']);
 
 const { service, store, qrDataUrl, checkUrl, loading, load } = useServiceNota();
+const thermalRef = ref(null);
 const a4Ref = ref(null);
 const isCapturing = ref(false);
-const downloading = ref(false);
+const downloading = ref(''); // '' | 'thermal' | 'a4'
 const downloadError = ref('');
 
 const waPhone = computed(() => normalizeWaPhone(service.value?.customer_phone));
 
-function printThermal() {
-  document.body.classList.add('print-receipt-only');
-  window.addEventListener('afterprint', () => document.body.classList.remove('print-receipt-only'), { once: true });
-  window.print();
+async function downloadThermal() {
+  downloading.value = 'thermal';
+  downloadError.value = '';
+  try {
+    await downloadElementAsFittedPdf(thermalRef.value.$el, `Struk-${service.value.ticket_no}.pdf`, 80);
+  } catch (err) {
+    downloadError.value = 'Gagal membuat struk, silakan coba lagi.';
+  } finally {
+    downloading.value = '';
+  }
 }
 
-async function downloadPdf() {
-  downloading.value = true;
+async function downloadA4() {
+  downloading.value = 'a4';
   downloadError.value = '';
   isCapturing.value = true;
   try {
-    const canvas = await html2canvas(a4Ref.value.$el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-    const imgData = canvas.toDataURL('image/png');
-
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const imgWidth = pageWidth;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    let heightLeft = imgHeight;
-    let position = 0;
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-
-    while (heightLeft > 0) {
-      position -= pageHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-    }
-
-    pdf.save(`Nota-${service.value.ticket_no}.pdf`);
+    await downloadElementAsA4Pdf(a4Ref.value.$el, `Nota-${service.value.ticket_no}.pdf`);
   } catch (err) {
     downloadError.value = 'Gagal membuat PDF, silakan coba lagi.';
   } finally {
-    downloading.value = false;
+    downloading.value = '';
     isCapturing.value = false;
   }
 }
@@ -86,9 +71,11 @@ onMounted(() => load(props.serviceId));
       </p>
 
       <div class="grid grid-cols-2 gap-2">
-        <button class="btn-secondary justify-center" @click="printThermal"><Printer :size="15" /> Cetak Struk</button>
-        <button class="btn-secondary justify-center" :disabled="downloading" @click="downloadPdf">
-          <Download :size="15" /> {{ downloading ? 'Membuat...' : 'Download PDF' }}
+        <button class="btn-secondary justify-center" :disabled="!!downloading" @click="downloadThermal">
+          <Download :size="15" /> {{ downloading === 'thermal' ? 'Membuat...' : 'Download Struk' }}
+        </button>
+        <button class="btn-secondary justify-center" :disabled="!!downloading" @click="downloadA4">
+          <Download :size="15" /> {{ downloading === 'a4' ? 'Membuat...' : 'Download PDF' }}
         </button>
       </div>
       <button class="btn-primary w-full justify-center" :disabled="!waPhone" @click="sendWhatsApp">
@@ -97,14 +84,10 @@ onMounted(() => load(props.serviceId));
       <button type="button" class="btn-secondary w-full justify-center" @click="emit('close')">Tutup</button>
     </div>
 
-    <!-- Off-screen renders used only as print/PDF-capture sources — never shown to the user. -->
-    <Teleport to="body">
-      <div v-if="service && store" class="receipt-print-target" style="position: fixed; left: -9999px; top: 0;">
-        <NotaServiceThermal :service="service" :store="store" :qr-data-url="qrDataUrl" />
-      </div>
-    </Teleport>
+    <!-- Off-screen renders used only as PDF-capture sources — never shown to the user. -->
     <Teleport to="body">
       <div v-if="service && store" style="position: fixed; left: -9999px; top: 0;">
+        <NotaServiceThermal ref="thermalRef" :service="service" :store="store" :qr-data-url="qrDataUrl" />
         <NotaServiceA4 ref="a4Ref" :service="service" :store="store" :qr-data-url="qrDataUrl" :check-url="checkUrl" :is-capturing="isCapturing" />
       </div>
     </Teleport>

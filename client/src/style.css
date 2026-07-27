@@ -93,16 +93,4 @@ body {
     size: A4;
     margin: 10mm;
   }
-
-  /* Print isolation for the post-checkout quick-action modal: the receipt is teleported
-     to a direct child of <body>, so this hides every other body child (app root, modal
-     backdrop) and reveals only the receipt when printing is triggered from there. */
-  body.print-receipt-only > *:not(.receipt-print-target) {
-    display: none !important;
-  }
-  body.print-receipt-only .receipt-print-target {
-    position: static !important;
-    left: auto !important;
-    top: auto !important;
-  }
 }

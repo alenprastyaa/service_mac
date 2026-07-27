@@ -1,61 +1,46 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-import { Printer, Download, MessageCircle, CheckCircle2 } from 'lucide-vue-next';
+import { Download, MessageCircle, CheckCircle2 } from 'lucide-vue-next';
 import Modal from './Modal.vue';
 import NotaThermal from './NotaThermal.vue';
 import NotaInvoiceA4 from './NotaInvoiceA4.vue';
 import { formatCurrency } from '../lib/format';
 import { normalizeWaPhone, openSaleWhatsApp } from '../lib/whatsapp';
 import { useSaleNota } from '../lib/useSaleNota';
+import { downloadElementAsFittedPdf, downloadElementAsA4Pdf } from '../lib/pdf';
 
 const props = defineProps({ saleId: { type: [Number, String], required: true } });
 const emit = defineEmits(['close']);
 
 const { sale, store, qrDataUrl, loading, load } = useSaleNota();
+const thermalRef = ref(null);
 const a4Ref = ref(null);
-const downloading = ref(false);
+const downloading = ref(''); // '' | 'thermal' | 'a4'
 const downloadError = ref('');
 
 const waPhone = computed(() => normalizeWaPhone(sale.value?.customer_phone));
 
-function printThermal() {
-  document.body.classList.add('print-receipt-only');
-  window.addEventListener('afterprint', () => document.body.classList.remove('print-receipt-only'), { once: true });
-  window.print();
-}
-
-async function downloadPdf() {
-  downloading.value = true;
+async function downloadThermal() {
+  downloading.value = 'thermal';
   downloadError.value = '';
   try {
-    const canvas = await html2canvas(a4Ref.value.$el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-    const imgData = canvas.toDataURL('image/png');
+    await downloadElementAsFittedPdf(thermalRef.value.$el, `Struk-${sale.value.invoice_no}.pdf`, 80);
+  } catch (err) {
+    downloadError.value = 'Gagal membuat struk, silakan coba lagi.';
+  } finally {
+    downloading.value = '';
+  }
+}
 
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const imgWidth = pageWidth;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    let heightLeft = imgHeight;
-    let position = 0;
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-
-    while (heightLeft > 0) {
-      position -= pageHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-    }
-
-    pdf.save(`Invoice-${sale.value.invoice_no}.pdf`);
+async function downloadA4() {
+  downloading.value = 'a4';
+  downloadError.value = '';
+  try {
+    await downloadElementAsA4Pdf(a4Ref.value.$el, `Invoice-${sale.value.invoice_no}.pdf`);
   } catch (err) {
     downloadError.value = 'Gagal membuat PDF, silakan coba lagi.';
   } finally {
-    downloading.value = false;
+    downloading.value = '';
   }
 }
 
@@ -84,9 +69,11 @@ onMounted(() => load(props.saleId));
       </p>
 
       <div class="grid grid-cols-2 gap-2">
-        <button class="btn-secondary justify-center" @click="printThermal"><Printer :size="15" /> Cetak Struk</button>
-        <button class="btn-secondary justify-center" :disabled="downloading" @click="downloadPdf">
-          <Download :size="15" /> {{ downloading ? 'Membuat...' : 'Download PDF' }}
+        <button class="btn-secondary justify-center" :disabled="!!downloading" @click="downloadThermal">
+          <Download :size="15" /> {{ downloading === 'thermal' ? 'Membuat...' : 'Download Struk' }}
+        </button>
+        <button class="btn-secondary justify-center" :disabled="!!downloading" @click="downloadA4">
+          <Download :size="15" /> {{ downloading === 'a4' ? 'Membuat...' : 'Download PDF' }}
         </button>
       </div>
       <button class="btn-primary w-full justify-center" :disabled="!waPhone" @click="sendWhatsApp">
@@ -95,14 +82,10 @@ onMounted(() => load(props.saleId));
       <button type="button" class="btn-secondary w-full justify-center" @click="emit('close')">Tutup</button>
     </div>
 
-    <!-- Off-screen renders used only as print/PDF-capture sources — never shown to the user. -->
-    <Teleport to="body">
-      <div v-if="sale && store" class="receipt-print-target" style="position: fixed; left: -9999px; top: 0;">
-        <NotaThermal :sale="sale" :store="store" />
-      </div>
-    </Teleport>
+    <!-- Off-screen renders used only as PDF-capture sources — never shown to the user. -->
     <Teleport to="body">
       <div v-if="sale && store" style="position: fixed; left: -9999px; top: 0;">
+        <NotaThermal ref="thermalRef" :sale="sale" :store="store" />
         <NotaInvoiceA4 ref="a4Ref" :sale="sale" :store="store" :qr-data-url="qrDataUrl" />
       </div>
     </Teleport>

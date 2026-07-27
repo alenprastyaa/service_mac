@@ -1,12 +1,11 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-import { ArrowLeft, Download, Printer, MessageCircle, Receipt, FileText, Smartphone, CheckCircle2 } from 'lucide-vue-next';
+import { ArrowLeft, Download, MessageCircle, Receipt, FileText, Smartphone, CheckCircle2 } from 'lucide-vue-next';
 import { formatDate, STATUS_LABELS } from '../lib/format';
 import { normalizeWaPhone, openServiceWhatsApp } from '../lib/whatsapp';
 import { useServiceNota } from '../lib/useServiceNota';
+import { downloadElementAsFittedPdf, downloadElementAsA4Pdf } from '../lib/pdf';
 import NotaServiceThermal from '../components/NotaServiceThermal.vue';
 import NotaServiceA4 from '../components/NotaServiceA4.vue';
 import logo from '../assets/logo.png';
@@ -16,6 +15,7 @@ const router = useRouter();
 
 const { service, store, qrDataUrl, checkUrl, loading, load } = useServiceNota();
 const activeTab = ref('thermal');
+const thermalRef = ref(null);
 const a4Ref = ref(null);
 const isCapturing = ref(false);
 const downloading = ref(false);
@@ -31,6 +31,19 @@ const receivedDate = computed(() => (service.value ? formatDate(service.value.re
 const statusLabel = computed(() => STATUS_LABELS[service.value?.status] || service.value?.status || '-');
 const waPhone = computed(() => normalizeWaPhone(service.value?.customer_phone));
 
+async function downloadThermal() {
+  downloading.value = true;
+  downloadError.value = '';
+  try {
+    await nextTick();
+    await downloadElementAsFittedPdf(thermalRef.value.$el, `Struk-${service.value.ticket_no}.pdf`, 80);
+  } catch (err) {
+    downloadError.value = 'Gagal membuat struk, silakan coba lagi.';
+  } finally {
+    downloading.value = false;
+  }
+}
+
 // Renders the on-screen nota to an image and lays it into an A4 PDF, matching
 // the exact on-screen design instead of relying on browser print CSS.
 async function downloadPdf() {
@@ -39,38 +52,13 @@ async function downloadPdf() {
   isCapturing.value = true;
   try {
     await nextTick();
-    const canvas = await html2canvas(a4Ref.value.$el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-    const imgData = canvas.toDataURL('image/png');
-
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const imgWidth = pageWidth;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    let heightLeft = imgHeight;
-    let position = 0;
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-
-    while (heightLeft > 0) {
-      position -= pageHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-    }
-
-    pdf.save(`Nota-${service.value.ticket_no}.pdf`);
+    await downloadElementAsA4Pdf(a4Ref.value.$el, `Nota-${service.value.ticket_no}.pdf`);
   } catch (err) {
     downloadError.value = 'Gagal membuat PDF, silakan coba lagi.';
   } finally {
     downloading.value = false;
     isCapturing.value = false;
   }
-}
-
-function printNota() {
-  window.print();
 }
 
 function sendWhatsApp() {
@@ -98,7 +86,9 @@ onMounted(() => load(route.params.id));
       </div>
 
       <div class="flex items-center gap-2">
-        <button v-if="activeTab === 'thermal'" class="btn-secondary" :disabled="loading" @click="printNota"><Printer :size="16" /> Cetak Struk</button>
+        <button v-if="activeTab === 'thermal'" class="btn-secondary" :disabled="loading || downloading" @click="downloadThermal">
+          <Download :size="16" /> {{ downloading ? 'Membuat...' : 'Download Struk' }}
+        </button>
         <button v-else-if="activeTab === 'a4'" class="btn-secondary" :disabled="loading || downloading" @click="downloadPdf">
           <Download :size="16" /> {{ downloading ? 'Membuat PDF...' : 'Download PDF' }}
         </button>
@@ -115,7 +105,7 @@ onMounted(() => load(route.params.id));
     <div v-if="loading" class="text-center py-20 text-sm text-neutral-400">Memuat nota...</div>
 
     <template v-else>
-      <NotaServiceThermal v-if="activeTab === 'thermal'" :service="service" :store="store" :qr-data-url="qrDataUrl" />
+      <NotaServiceThermal v-if="activeTab === 'thermal'" ref="thermalRef" :service="service" :store="store" :qr-data-url="qrDataUrl" />
       <NotaServiceA4
         v-else-if="activeTab === 'a4'"
         ref="a4Ref"
