@@ -12,6 +12,19 @@ export function formatDateTime(value) {
   return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
 }
 
+export function formatTimeAgo(value) {
+  if (!value) return '-';
+  const diffSec = Math.round((Date.now() - new Date(value).getTime()) / 1000);
+  if (diffSec < 60) return 'Baru saja';
+  const diffMin = Math.round(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} menit lalu`;
+  const diffHour = Math.round(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} jam lalu`;
+  const diffDay = Math.round(diffHour / 24);
+  if (diffDay < 7) return `${diffDay} hari lalu`;
+  return formatDate(value);
+}
+
 export const STATUS_LABELS = {
   lunas: 'Lunas',
   belum_lunas: 'Belum Lunas',
@@ -21,6 +34,13 @@ export const STATUS_LABELS = {
   menunggu_sparepart: 'Menunggu Sparepart',
   selesai: 'Selesai',
   diambil: 'Sudah Diambil',
+};
+
+export const PAYMENT_METHOD_LABELS = {
+  tunai: 'Tunai',
+  transfer: 'Transfer Bank',
+  qris: 'QRIS',
+  kartu: 'Kartu Debit/Kredit',
 };
 
 export const ROLE_LABELS = {

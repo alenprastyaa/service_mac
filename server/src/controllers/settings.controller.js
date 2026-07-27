@@ -31,4 +31,17 @@ async function updateStore(req, res) {
   res.json(rows[0]);
 }
 
-module.exports = { getStore, updateStore };
+async function updateTarget(req, res) {
+  const target = Number(req.body.monthly_omzet_target);
+  if (!Number.isFinite(target) || target < 0) return res.status(400).json({ error: 'Nominal target tidak valid' });
+
+  await pool.query(
+    `INSERT INTO store_settings (id, monthly_omzet_target) VALUES (1, ?)
+     ON DUPLICATE KEY UPDATE monthly_omzet_target = VALUES(monthly_omzet_target)`,
+    [target]
+  );
+  const [rows] = await pool.query('SELECT * FROM store_settings WHERE id = 1');
+  res.json(rows[0]);
+}
+
+module.exports = { getStore, updateStore, updateTarget };

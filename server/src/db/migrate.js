@@ -13,6 +13,13 @@ const INDEXES = [
   'CREATE INDEX idx_services_technician ON services(technician_id)',
   'CREATE INDEX idx_checklist_templates_category ON checklist_templates(category, sort_order)',
   'CREATE INDEX idx_service_checklist_items_service ON service_checklist_items(service_id)',
+  'CREATE INDEX idx_notifications_is_read ON notifications(is_read)',
+];
+
+// Columns added after the initial CREATE TABLE shipped — applied to databases that
+// already existed before this column was introduced.
+const COLUMNS = [
+  'ALTER TABLE store_settings ADD COLUMN monthly_omzet_target DECIMAL(14,2) NOT NULL DEFAULT 0',
 ];
 
 // Creates the database and all tables if they don't exist yet. Safe to run on every
@@ -29,6 +36,14 @@ async function ensureSchema() {
   try {
     const initSql = fs.readFileSync(path.join(__dirname, 'init.sql'), 'utf8').replace(/__DB_NAME__/g, DB_NAME);
     await conn.query(initSql);
+
+    for (const columnSql of COLUMNS) {
+      try {
+        await conn.query(columnSql);
+      } catch (err) {
+        if (err.code !== 'ER_DUP_FIELDNAME') throw err;
+      }
+    }
 
     for (const indexSql of INDEXES) {
       try {

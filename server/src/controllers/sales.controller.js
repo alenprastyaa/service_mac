@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { notify } = require('../lib/notify');
 
 async function nextInvoiceNo(conn) {
   const [rows] = await conn.query('SELECT invoice_no FROM sales ORDER BY id DESC LIMIT 1');
@@ -42,7 +43,14 @@ async function list(req, res) {
 }
 
 async function get(req, res) {
-  const [sales] = await pool.query('SELECT s.*, c.name AS customer_name FROM sales s LEFT JOIN customers c ON c.id = s.customer_id WHERE s.id = ?', [req.params.id]);
+  const [sales] = await pool.query(
+    `SELECT s.*, c.name AS customer_name, c.phone AS customer_phone, u.name AS created_by_name, u.role AS created_by_role
+     FROM sales s
+     LEFT JOIN customers c ON c.id = s.customer_id
+     LEFT JOIN users u ON u.id = s.created_by
+     WHERE s.id = ?`,
+    [req.params.id]
+  );
   if (!sales[0]) return res.status(404).json({ error: 'Transaksi tidak ditemukan' });
   const [items] = await pool.query('SELECT si.*, p.name AS product_name, p.sku FROM sale_items si JOIN products p ON p.id = si.product_id WHERE si.sale_id = ?', [req.params.id]);
   res.json({ ...sales[0], items });
@@ -85,6 +93,14 @@ async function create(req, res) {
         product.id, qty, `Penjualan ${invoiceNo}`, saleId, req.user.id,
       ]);
     }
+
+    await notify(conn, {
+      type: 'sale',
+      title: 'Penjualan Baru',
+      message: `${invoiceNo} • Rp ${Number(total).toLocaleString('id-ID')}`,
+      ref_type: 'sale',
+      ref_id: saleId,
+    });
 
     await conn.commit();
     const [rows] = await pool.query('SELECT s.*, c.name AS customer_name FROM sales s LEFT JOIN customers c ON c.id = s.customer_id WHERE s.id = ?', [saleId]);

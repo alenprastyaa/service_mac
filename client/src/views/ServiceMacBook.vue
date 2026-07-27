@@ -154,7 +154,7 @@ async function saveDiagnosis() {
   detailSaving.value = true;
   detailError.value = '';
   try {
-    await api.put(`/services/${detail.value.id}`, diagnosisForm.value);
+    await api.put(`/services/${detail.value.id}`, { ...diagnosisForm.value, technician_id: diagnosisForm.value.technician_id || null });
     await loadDetail(detail.value.id);
   } catch (err) {
     detailError.value = err.response?.data?.error || 'Gagal menyimpan';

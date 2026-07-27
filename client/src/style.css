@@ -53,6 +53,22 @@ body {
   max-width: 820px;
 }
 
+.thermal-page {
+  background: #fff;
+  color: #171717;
+  max-width: 320px;
+}
+
+/* Named page for 80mm thermal receipts — honored by Chromium-based browsers,
+   falls back to the default @page size elsewhere (still printable, just wider margins). */
+@page thermal-page {
+  size: 80mm auto;
+  margin: 2mm;
+}
+.thermal-page {
+  page: thermal-page;
+}
+
 @media print {
   .no-print {
     display: none !important;
@@ -65,6 +81,13 @@ body {
     margin: 0;
     box-shadow: none !important;
     border: none !important;
+  }
+  .thermal-page {
+    max-width: none !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
   }
   @page {
     size: A4;

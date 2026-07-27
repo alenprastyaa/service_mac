@@ -21,6 +21,7 @@ app.use('/api/dashboard', require('./routes/dashboard.routes'));
 app.use('/api/reports', require('./routes/reports.routes'));
 app.use('/api/checklist-templates', require('./routes/checklistTemplates.routes'));
 app.use('/api/settings', require('./routes/settings.routes'));
+app.use('/api/notifications', require('./routes/notifications.routes'));
 app.use('/api/public', require('./routes/public.routes'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));

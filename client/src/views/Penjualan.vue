@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Plus, Search, Trash2, Minus, ShoppingCart, Eye } from 'lucide-vue-next';
+import { useRouter } from 'vue-router';
+import { Plus, Search, Trash2, Minus, ShoppingCart, Eye, Receipt } from 'lucide-vue-next';
 import api from '../lib/api';
 import Modal from '../components/Modal.vue';
 import StatusBadge from '../components/StatusBadge.vue';
@@ -9,6 +10,7 @@ import ConfirmDialog from '../components/ConfirmDialog.vue';
 import { formatCurrency, formatDateTime } from '../lib/format';
 import { useAuthStore } from '../stores/auth';
 
+const router = useRouter();
 const auth = useAuthStore();
 const canDelete = computed(() => auth.can('owner'));
 const deleting = ref(null);
@@ -87,12 +89,16 @@ async function openPos() {
   showPos.value = true;
 }
 
+function openNota(id) {
+  router.push({ name: 'penjualan-nota', params: { id } });
+}
+
 async function submitSale() {
   if (!cart.value.length) return;
   error.value = '';
   saving.value = true;
   try {
-    await api.post('/sales', {
+    const { data } = await api.post('/sales', {
       customer_id: customerId.value || null,
       items: cart.value.map((c) => ({ product_id: c.product_id, qty: c.qty, price: c.price })),
       discount: Number(discount.value || 0),
@@ -100,7 +106,7 @@ async function submitSale() {
       status: 'lunas',
     });
     showPos.value = false;
-    await loadSales();
+    openNota(data.id);
   } catch (err) {
     error.value = err.response?.data?.error || 'Gagal membuat transaksi';
   } finally {
@@ -163,7 +169,8 @@ onMounted(loadSales);
               <td class="px-2 py-3 text-right font-medium">{{ formatCurrency(s.total) }}</td>
               <td class="px-2 py-3"><StatusBadge :status="s.status" /></td>
               <td class="px-2 py-3 text-right">
-                <button class="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500" @click="openDetail(s)"><Eye :size="15" /></button>
+                <button class="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500" @click="openDetail(s)" title="Detail"><Eye :size="15" /></button>
+                <button class="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500" @click="openNota(s.id)" title="Cetak / Kirim Nota"><Receipt :size="15" /></button>
                 <button v-if="canDelete" class="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-950 text-red-500" @click="deleting = s"><Trash2 :size="15" /></button>
               </td>
             </tr>
@@ -283,8 +290,9 @@ onMounted(loadSales);
         <div class="flex justify-between text-neutral-500"><span>Diskon</span><span>-{{ formatCurrency(detail.discount) }}</span></div>
         <div class="flex justify-between font-semibold text-base"><span>Total</span><span>{{ formatCurrency(detail.total) }}</span></div>
       </div>
-      <div v-if="canDelete" class="flex justify-end mt-4">
-        <button class="btn-danger" @click="deleting = detail"><Trash2 :size="15" /> Hapus Transaksi</button>
+      <div class="flex justify-end gap-2 mt-4">
+        <button v-if="canDelete" class="btn-danger" @click="deleting = detail"><Trash2 :size="15" /> Hapus Transaksi</button>
+        <button class="btn-primary" @click="openNota(detail.id)"><Receipt :size="15" /> Cetak / Kirim Nota</button>
       </div>
     </Modal>
 

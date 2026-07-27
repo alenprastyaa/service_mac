@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const { encrypt, decrypt } = require('../lib/crypto');
+const { notify } = require('../lib/notify');
 
 const STATUSES = ['menunggu_pengecekan', 'sedang_dikerjakan', 'menunggu_sparepart', 'selesai', 'diambil'];
 
@@ -141,6 +142,13 @@ async function create(req, res) {
     );
     await insertChecklist(conn, r.insertId, checklist);
     await conn.query('INSERT INTO service_status_history (service_id, status, note, changed_by) VALUES (?, "menunggu_pengecekan", "Perangkat diterima", ?)', [r.insertId, req.user.id]);
+    await notify(conn, {
+      type: 'service',
+      title: 'Service Masuk',
+      message: `${ticketNo} • ${device_model}`,
+      ref_type: 'service',
+      ref_id: r.insertId,
+    });
     await conn.commit();
 
     const [createdRows] = await pool.query('SELECT sv.*, c.name AS customer_name FROM services sv LEFT JOIN customers c ON c.id = sv.customer_id WHERE sv.id = ?', [r.insertId]);
@@ -172,7 +180,7 @@ async function update(req, res) {
       device_password !== undefined ? encrypt(device_password) : current.device_password_enc,
       complaint ?? current.complaint,
       diagnosis ?? current.diagnosis,
-      technician_id ?? current.technician_id,
+      technician_id === undefined ? current.technician_id : (technician_id || null),
       estimated_cost ?? current.estimated_cost,
       checkup_estimate ?? current.checkup_estimate,
       notes ?? current.notes,

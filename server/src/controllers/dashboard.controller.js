@@ -49,6 +49,8 @@ async function summary(req, res) {
      FROM services`
   );
 
+  const [[storeSettings]] = await pool.query('SELECT monthly_omzet_target FROM store_settings WHERE id = 1');
+
   const [lowStockProducts] = await pool.query('SELECT id, name, stock_qty, min_stock, unit FROM products WHERE stock_qty <= min_stock ORDER BY stock_qty ASC LIMIT 5');
 
   const [recentTransactions] = await pool.query(
@@ -84,6 +86,7 @@ async function summary(req, res) {
       sedang_dikerjakan: Number(serviceStats.sedang_dikerjakan) || 0,
       selesai: Number(serviceStats.selesai) || 0,
     },
+    monthly_omzet_target: Number(storeSettings?.monthly_omzet_target || 0),
     low_stock_products: lowStockProducts,
     recent_transactions: recentTransactions.map((t) => ({ ...t, status: t.status === 'lunas' || t.status === 'selesai' || t.status === 'diambil' ? 'Lunas' : t.status === 'belum_lunas' ? 'Belum Lunas' : 'Dibatalkan' })),
   });

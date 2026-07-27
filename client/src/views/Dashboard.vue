@@ -1,16 +1,53 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Wallet, CalendarRange, TrendingUp, Laptop, PackageSearch, Inbox, CheckCircle2, Clock, Wrench as WrenchIcon, Box, CalendarDays } from 'lucide-vue-next';
+import { Wallet, CalendarRange, TrendingUp, Laptop, PackageSearch, Inbox, CheckCircle2, Clock, Wrench as WrenchIcon, Box, CalendarDays, Pencil } from 'lucide-vue-next';
 import api from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import StatCard from '../components/StatCard.vue';
 import StatusBadge from '../components/StatusBadge.vue';
 import EmptyState from '../components/EmptyState.vue';
+import Modal from '../components/Modal.vue';
 import { formatCurrency, formatDate } from '../lib/format';
 
 const auth = useAuthStore();
+const isOwner = computed(() => auth.role === 'owner');
 const summary = ref(null);
 const loading = ref(true);
+
+const targetProgressPct = computed(() => {
+  if (!summary.value?.monthly_omzet_target) return 0;
+  return Math.min(100, Math.round((summary.value.omzet_month / summary.value.monthly_omzet_target) * 100));
+});
+
+const showTargetModal = ref(false);
+const targetForm = ref('');
+const targetSaving = ref(false);
+const targetError = ref('');
+
+function openTargetModal() {
+  targetForm.value = summary.value?.monthly_omzet_target || '';
+  targetError.value = '';
+  showTargetModal.value = true;
+}
+
+async function saveTarget() {
+  const value = Number(targetForm.value);
+  if (!Number.isFinite(value) || value < 0) {
+    targetError.value = 'Masukkan nominal yang valid';
+    return;
+  }
+  targetSaving.value = true;
+  targetError.value = '';
+  try {
+    await api.put('/settings/target', { monthly_omzet_target: value });
+    showTargetModal.value = false;
+    await loadSummary();
+  } catch (err) {
+    targetError.value = err.response?.data?.error || 'Gagal menyimpan target';
+  } finally {
+    targetSaving.value = false;
+  }
+}
 
 const greeting = computed(() => {
   const h = new Date().getHours();
@@ -115,6 +152,30 @@ const serviceRows = computed(() => {
       />
     </div>
 
+    <div class="mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold">Target Bulanan</h3>
+        <button v-if="isOwner" @click="openTargetModal" class="flex items-center gap-1.5 text-xs font-medium text-brand-500 hover:underline">
+          <Pencil :size="13" /> Atur Target
+        </button>
+      </div>
+      <div class="card p-5">
+        <template v-if="summary.monthly_omzet_target > 0">
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-sm font-medium">Progress Omzet</p>
+            <p class="text-lg font-bold text-orange-500">{{ targetProgressPct }}%</p>
+          </div>
+          <div class="h-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+            <div class="h-full rounded-full bg-orange-500 transition-all" :style="{ width: `${targetProgressPct}%` }"></div>
+          </div>
+          <p class="text-sm text-neutral-500 mt-3">
+            {{ formatCurrency(summary.omzet_month) }} dari Target {{ formatCurrency(summary.monthly_omzet_target) }}
+          </p>
+        </template>
+        <EmptyState v-else :message="isOwner ? 'Target omzet bulanan belum diatur. Klik \'Atur Target\' untuk menetapkannya.' : 'Target omzet bulanan belum diatur oleh Owner.'" />
+      </div>
+    </div>
+
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
       <div class="card p-5">
         <div class="flex items-center justify-between mb-4">
@@ -188,4 +249,18 @@ const serviceRows = computed(() => {
   </div>
 
   <div v-else class="py-20 text-center text-neutral-400 text-sm">Memuat dashboard...</div>
+
+  <Modal v-if="showTargetModal" title="Atur Target Omzet Bulanan" size="sm" @close="showTargetModal = false">
+    <div class="space-y-4">
+      <div>
+        <label class="label">Nominal Target (Rp)</label>
+        <input v-model="targetForm" type="number" min="0" step="100000" class="input" placeholder="Contoh: 170000000" />
+      </div>
+      <p v-if="targetError" class="text-sm text-red-500">{{ targetError }}</p>
+      <div class="flex justify-end gap-2 pt-1">
+        <button type="button" class="btn-secondary" @click="showTargetModal = false">Batal</button>
+        <button type="button" class="btn-primary" :disabled="targetSaving" @click="saveTarget">Simpan</button>
+      </div>
+    </div>
+  </Modal>
 </template>

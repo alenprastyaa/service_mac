@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS store_settings (
   instagram VARCHAR(100),
   intake_notice TEXT,
   consent_text TEXT,
+  monthly_omzet_target DECIMAL(14,2) NOT NULL DEFAULT 0,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
@@ -193,6 +194,19 @@ CREATE TABLE IF NOT EXISTS service_checklist_items (
   sort_order INT NOT NULL DEFAULT 0,
   FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE,
   FOREIGN KEY (template_id) REFERENCES checklist_templates(id) ON DELETE SET NULL
+);
+
+-- Feeds the topbar notification bell. Populated automatically when a sale or
+-- service ticket is created (see lib/notify.js), read via /api/notifications.
+CREATE TABLE IF NOT EXISTS notifications (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  type VARCHAR(30) NOT NULL,
+  title VARCHAR(150) NOT NULL,
+  message VARCHAR(255) NOT NULL,
+  ref_type VARCHAR(30) DEFAULT NULL,
+  ref_id INT DEFAULT NULL,
+  is_read TINYINT(1) NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 INSERT IGNORE INTO store_settings (id) VALUES (1);
