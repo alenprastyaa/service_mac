@@ -7,6 +7,7 @@ import Modal from '../components/Modal.vue';
 import StatusBadge from '../components/StatusBadge.vue';
 import EmptyState from '../components/EmptyState.vue';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
+import SaleSuccessModal from '../components/SaleSuccessModal.vue';
 import { formatCurrency, formatDateTime } from '../lib/format';
 import { useAuthStore } from '../stores/auth';
 
@@ -32,6 +33,7 @@ const discount = ref(0);
 const paymentMethod = ref('tunai');
 const saving = ref(false);
 const error = ref('');
+const successSaleId = ref(null);
 
 async function loadSales() {
   loading.value = true;
@@ -106,12 +108,17 @@ async function submitSale() {
       status: 'lunas',
     });
     showPos.value = false;
-    openNota(data.id);
+    successSaleId.value = data.id;
   } catch (err) {
     error.value = err.response?.data?.error || 'Gagal membuat transaksi';
   } finally {
     saving.value = false;
   }
+}
+
+function closeSuccessModal() {
+  successSaleId.value = null;
+  loadSales();
 }
 
 async function openDetail(sale) {
@@ -303,5 +310,7 @@ onMounted(loadSales);
       @confirm="confirmDelete"
       @cancel="deleting = null"
     />
+
+    <SaleSuccessModal v-if="successSaleId" :sale-id="successSaleId" @close="closeSuccessModal" />
   </div>
 </template>

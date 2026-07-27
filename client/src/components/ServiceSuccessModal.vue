@@ -1,0 +1,112 @@
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import { Printer, Download, MessageCircle, CheckCircle2 } from 'lucide-vue-next';
+import Modal from './Modal.vue';
+import NotaServiceThermal from './NotaServiceThermal.vue';
+import NotaServiceA4 from './NotaServiceA4.vue';
+import { normalizeWaPhone, openServiceWhatsApp } from '../lib/whatsapp';
+import { useServiceNota } from '../lib/useServiceNota';
+
+const props = defineProps({ serviceId: { type: [Number, String], required: true } });
+const emit = defineEmits(['close']);
+
+const { service, store, qrDataUrl, checkUrl, loading, load } = useServiceNota();
+const a4Ref = ref(null);
+const isCapturing = ref(false);
+const downloading = ref(false);
+const downloadError = ref('');
+
+const waPhone = computed(() => normalizeWaPhone(service.value?.customer_phone));
+
+function printThermal() {
+  document.body.classList.add('print-receipt-only');
+  window.addEventListener('afterprint', () => document.body.classList.remove('print-receipt-only'), { once: true });
+  window.print();
+}
+
+async function downloadPdf() {
+  downloading.value = true;
+  downloadError.value = '';
+  isCapturing.value = true;
+  try {
+    const canvas = await html2canvas(a4Ref.value.$el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+    const imgData = canvas.toDataURL('image/png');
+
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pageWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position = 0;
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+
+    while (heightLeft > 0) {
+      position -= pageHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+
+    pdf.save(`Nota-${service.value.ticket_no}.pdf`);
+  } catch (err) {
+    downloadError.value = 'Gagal membuat PDF, silakan coba lagi.';
+  } finally {
+    downloading.value = false;
+    isCapturing.value = false;
+  }
+}
+
+function sendWhatsApp() {
+  openServiceWhatsApp(service.value, store.value, checkUrl.value);
+}
+
+onMounted(() => load(props.serviceId));
+</script>
+
+<template>
+  <Modal title="Tiket Berhasil Dibuat" size="sm" @close="emit('close')">
+    <div v-if="loading" class="text-center py-8 text-sm text-neutral-400">Menyiapkan nota...</div>
+    <div v-else class="space-y-4">
+      <div class="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-950 rounded-xl px-4 py-3">
+        <CheckCircle2 :size="20" class="text-emerald-500 shrink-0" />
+        <div class="min-w-0">
+          <p class="font-semibold truncate">{{ service.ticket_no }}</p>
+          <p class="text-xs text-neutral-500 truncate">{{ service.customer_name || 'Tanpa nama pelanggan' }} • {{ service.device_model }}</p>
+        </div>
+      </div>
+
+      <p v-if="downloadError" class="text-sm text-red-500 text-center">{{ downloadError }}</p>
+      <p v-if="!waPhone" class="text-xs text-amber-600 text-center">
+        Nomor WhatsApp pelanggan tidak tersedia — lengkapi nomor HP di data pelanggan agar bisa kirim langsung.
+      </p>
+
+      <div class="grid grid-cols-2 gap-2">
+        <button class="btn-secondary justify-center" @click="printThermal"><Printer :size="15" /> Cetak Struk</button>
+        <button class="btn-secondary justify-center" :disabled="downloading" @click="downloadPdf">
+          <Download :size="15" /> {{ downloading ? 'Membuat...' : 'Download PDF' }}
+        </button>
+      </div>
+      <button class="btn-primary w-full justify-center" :disabled="!waPhone" @click="sendWhatsApp">
+        <MessageCircle :size="15" /> Kirim ke WhatsApp
+      </button>
+      <button type="button" class="btn-secondary w-full justify-center" @click="emit('close')">Tutup</button>
+    </div>
+
+    <!-- Off-screen renders used only as print/PDF-capture sources — never shown to the user. -->
+    <Teleport to="body">
+      <div v-if="service && store" class="receipt-print-target" style="position: fixed; left: -9999px; top: 0;">
+        <NotaServiceThermal :service="service" :store="store" :qr-data-url="qrDataUrl" />
+      </div>
+    </Teleport>
+    <Teleport to="body">
+      <div v-if="service && store" style="position: fixed; left: -9999px; top: 0;">
+        <NotaServiceA4 ref="a4Ref" :service="service" :store="store" :qr-data-url="qrDataUrl" :check-url="checkUrl" :is-capturing="isCapturing" />
+      </div>
+    </Teleport>
+  </Modal>
+</template>

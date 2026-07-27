@@ -7,6 +7,7 @@ import Modal from '../components/Modal.vue';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import StatusBadge from '../components/StatusBadge.vue';
 import EmptyState from '../components/EmptyState.vue';
+import ServiceSuccessModal from '../components/ServiceSuccessModal.vue';
 import { formatCurrency, formatDateTime, KONDISI_FISIK_OPTIONS, KELENGKAPAN_OPTIONS } from '../lib/format';
 
 const auth = useAuthStore();
@@ -49,6 +50,7 @@ const createForm = ref(emptyCreateForm());
 const createChecklist = ref({ kondisi_fisik: [], kelengkapan: [] });
 const createError = ref('');
 const creating = ref(false);
+const successServiceId = ref(null);
 
 function emptyCreateForm() {
   return {
@@ -85,14 +87,19 @@ async function submitCreate() {
         ...createChecklist.value.kelengkapan.map((c) => ({ ...c, category: 'kelengkapan' })),
       ],
     };
-    await api.post('/services', payload);
+    const { data } = await api.post('/services', payload);
     showCreate.value = false;
-    await loadTickets();
+    successServiceId.value = data.id;
   } catch (err) {
     createError.value = err.response?.data?.error || 'Gagal membuat tiket service';
   } finally {
     creating.value = false;
   }
+}
+
+function closeSuccessModal() {
+  successServiceId.value = null;
+  loadTickets();
 }
 
 // Detail modal
@@ -516,5 +523,7 @@ onMounted(loadTickets);
       @confirm="confirmDeleteTicket"
       @cancel="deleting = null"
     />
+
+    <ServiceSuccessModal v-if="successServiceId" :service-id="successServiceId" @close="closeSuccessModal" />
   </div>
 </template>
