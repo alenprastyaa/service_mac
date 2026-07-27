@@ -147,17 +147,19 @@ onMounted(load);
         </button>
       </div>
 
-      <button v-if="activeTab === 'thermal'" class="btn-primary" :disabled="loading" @click="printNota"><Printer :size="16" /> Cetak Struk</button>
-      <button v-else-if="activeTab === 'a4'" class="btn-primary" :disabled="loading || downloading" @click="downloadPdf">
-        <Download :size="16" /> {{ downloading ? 'Membuat PDF...' : 'Download PDF' }}
-      </button>
-      <button v-else class="btn-primary" :disabled="loading || !waPhone" @click="sendWhatsApp">
-        <MessageCircle :size="16" /> Kirim via WhatsApp
-      </button>
+      <div class="flex items-center gap-2">
+        <button v-if="activeTab === 'thermal'" class="btn-secondary" :disabled="loading" @click="printNota"><Printer :size="16" /> Cetak Struk</button>
+        <button v-else-if="activeTab === 'a4'" class="btn-secondary" :disabled="loading || downloading" @click="downloadPdf">
+          <Download :size="16" /> {{ downloading ? 'Membuat PDF...' : 'Download PDF' }}
+        </button>
+        <button class="btn-primary" :disabled="loading || !waPhone" :title="!waPhone ? 'Nomor WhatsApp pelanggan tidak tersedia' : ''" @click="sendWhatsApp">
+          <MessageCircle :size="16" /> Kirim ke WhatsApp
+        </button>
+      </div>
     </div>
     <p v-if="downloadError" class="no-print text-sm text-red-500 text-center max-w-[820px] mx-auto mb-3">{{ downloadError }}</p>
-    <p v-if="activeTab === 'digital' && !waPhone && !loading" class="no-print text-sm text-amber-600 text-center max-w-[820px] mx-auto mb-3">
-      Nomor WhatsApp pelanggan tidak tersedia untuk transaksi ini.
+    <p v-if="!waPhone && !loading" class="no-print text-sm text-amber-600 text-center max-w-[820px] mx-auto mb-3">
+      Nomor WhatsApp pelanggan tidak tersedia untuk transaksi ini — lengkapi nomor HP di data pelanggan agar nota bisa dikirim langsung.
     </p>
 
     <div v-if="loading" class="text-center py-20 text-sm text-neutral-400">Memuat nota...</div>
@@ -374,7 +376,7 @@ onMounted(load);
           </div>
         </div>
         <p class="no-print text-xs text-neutral-400 text-center mt-4">
-          Klik "Kirim via WhatsApp" untuk membuka chat pelanggan dengan pesan nota siap kirim.
+          Klik "Kirim ke WhatsApp" di atas untuk membuka chat pelanggan dengan pesan nota siap kirim.
         </p>
       </div>
     </template>

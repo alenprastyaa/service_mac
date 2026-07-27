@@ -52,7 +52,7 @@ const creating = ref(false);
 
 function emptyCreateForm() {
   return {
-    customer_id: '', new_customer: { name: '', phone: '', email: '', address: '' },
+    customer_id: '', new_customer: { name: '', phone: '', address: '' },
     device_model: '', model_number: '', serial_number: '', device_color: '', device_storage: '', device_password: '',
     complaint: '', estimated_cost: 0, checkup_estimate: '1 x 24 Jam',
   };
@@ -299,8 +299,7 @@ onMounted(loadTickets);
           </select>
           <div v-else class="grid grid-cols-2 gap-3">
             <input v-model="createForm.new_customer.name" required placeholder="Nama pelanggan" class="input col-span-2" />
-            <input v-model="createForm.new_customer.phone" placeholder="No. HP / WA" class="input" />
-            <input v-model="createForm.new_customer.email" placeholder="Email" class="input" />
+            <input v-model="createForm.new_customer.phone" placeholder="No. HP / WA" class="input col-span-2" />
             <textarea v-model="createForm.new_customer.address" placeholder="Alamat" rows="2" class="input col-span-2"></textarea>
           </div>
         </div>

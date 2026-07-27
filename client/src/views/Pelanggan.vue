@@ -27,7 +27,7 @@ const showDetail = ref(false);
 const detail = ref(null);
 
 function emptyForm() {
-  return { name: '', phone: '', email: '', address: '' };
+  return { name: '', phone: '', address: '' };
 }
 
 async function load() {
@@ -98,7 +98,7 @@ onMounted(load);
     <div class="card p-4 mb-4">
       <div class="relative max-w-md">
         <Search :size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-        <input v-model="search" @input="onSearchInput" class="input !pl-9" placeholder="Cari nama, telepon, atau email..." />
+        <input v-model="search" @input="onSearchInput" class="input !pl-9" placeholder="Cari nama atau telepon..." />
       </div>
     </div>
 
@@ -110,7 +110,6 @@ onMounted(load);
             <tr class="text-left text-neutral-400 text-xs uppercase">
               <th class="px-2 py-2 font-medium">Nama</th>
               <th class="px-2 py-2 font-medium">Telepon</th>
-              <th class="px-2 py-2 font-medium">Email</th>
               <th class="px-2 py-2 font-medium">Alamat</th>
               <th class="px-2 py-2 font-medium text-right">Aksi</th>
             </tr>
@@ -126,7 +125,6 @@ onMounted(load);
                 </div>
               </td>
               <td class="px-2 py-3 text-neutral-500">{{ c.phone || '-' }}</td>
-              <td class="px-2 py-3 text-neutral-500">{{ c.email || '-' }}</td>
               <td class="px-2 py-3 text-neutral-500 truncate max-w-[200px]">{{ c.address || '-' }}</td>
               <td class="px-2 py-3">
                 <div class="flex justify-end gap-1">
@@ -147,15 +145,9 @@ onMounted(load);
           <label class="label">Nama</label>
           <input v-model="form.name" required class="input" />
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="label">Telepon</label>
-            <input v-model="form.phone" class="input" />
-          </div>
-          <div>
-            <label class="label">Email</label>
-            <input v-model="form.email" type="email" class="input" />
-          </div>
+        <div>
+          <label class="label">Telepon</label>
+          <input v-model="form.phone" class="input" />
         </div>
         <div>
           <label class="label">Alamat</label>
@@ -174,7 +166,6 @@ onMounted(load);
     <Modal v-if="showDetail && detail" :title="detail.name" @close="showDetail = false">
       <div class="text-sm space-y-1 mb-5">
         <p><span class="text-neutral-500">Telepon:</span> {{ detail.phone || '-' }}</p>
-        <p><span class="text-neutral-500">Email:</span> {{ detail.email || '-' }}</p>
         <p><span class="text-neutral-500">Alamat:</span> {{ detail.address || '-' }}</p>
       </div>
 

@@ -22,7 +22,7 @@ const showDetail = ref(false);
 const detail = ref(null);
 
 function emptyForm() {
-  return { name: '', contact_person: '', phone: '', email: '', address: '' };
+  return { name: '', contact_person: '', phone: '', address: '' };
 }
 
 async function load() {
@@ -106,7 +106,6 @@ onMounted(load);
               <th class="px-2 py-2 font-medium">Nama Supplier</th>
               <th class="px-2 py-2 font-medium">Kontak</th>
               <th class="px-2 py-2 font-medium">Telepon</th>
-              <th class="px-2 py-2 font-medium">Email</th>
               <th class="px-2 py-2 font-medium text-right">Aksi</th>
             </tr>
           </thead>
@@ -122,7 +121,6 @@ onMounted(load);
               </td>
               <td class="px-2 py-3 text-neutral-500">{{ s.contact_person || '-' }}</td>
               <td class="px-2 py-3 text-neutral-500">{{ s.phone || '-' }}</td>
-              <td class="px-2 py-3 text-neutral-500">{{ s.email || '-' }}</td>
               <td class="px-2 py-3">
                 <div class="flex justify-end gap-1">
                   <button class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500" @click="openDetail(s)"><Eye :size="15" /></button>
@@ -146,15 +144,9 @@ onMounted(load);
           <label class="label">Nama Kontak</label>
           <input v-model="form.contact_person" class="input" />
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="label">Telepon</label>
-            <input v-model="form.phone" class="input" />
-          </div>
-          <div>
-            <label class="label">Email</label>
-            <input v-model="form.email" type="email" class="input" />
-          </div>
+        <div>
+          <label class="label">Telepon</label>
+          <input v-model="form.phone" class="input" />
         </div>
         <div>
           <label class="label">Alamat</label>
@@ -174,7 +166,6 @@ onMounted(load);
       <div class="text-sm space-y-1 mb-5">
         <p><span class="text-neutral-500">Kontak:</span> {{ detail.contact_person || '-' }}</p>
         <p><span class="text-neutral-500">Telepon:</span> {{ detail.phone || '-' }}</p>
-        <p><span class="text-neutral-500">Email:</span> {{ detail.email || '-' }}</p>
         <p><span class="text-neutral-500">Alamat:</span> {{ detail.address || '-' }}</p>
       </div>
       <h4 class="font-medium text-sm mb-2">Riwayat Barang Masuk</h4>
