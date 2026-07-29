@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
-import { Search, Bell, Moon, Sun, LogOut, UserCog, ShoppingCart, Wrench } from 'lucide-vue-next';
+import { Search, Bell, Moon, Sun, LogOut, UserCog, ShoppingCart, Wrench, Menu } from 'lucide-vue-next';
 import { useUiStore } from '../stores/ui';
 import { useAuthStore } from '../stores/auth';
 import { useNotificationsStore } from '../stores/notifications';
@@ -49,11 +49,16 @@ function logout() {
 </script>
 
 <template>
-  <header class="sticky top-0 z-10 bg-neutral-50/80 dark:bg-neutral-950/80 backdrop-blur px-6 py-4 flex items-center gap-4">
-    <div class="relative flex-1 max-w-xl">
+  <header class="sticky top-0 z-10 bg-neutral-50/80 dark:bg-neutral-950/80 backdrop-blur px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
+    <button class="lg:hidden w-10 h-10 shrink-0 rounded-full bg-white dark:bg-neutral-900 shadow-card flex items-center justify-center text-neutral-500 hover:text-brand-500 transition-colors" title="Menu" @click="ui.toggleSidebar()">
+      <Menu :size="18" />
+    </button>
+
+    <div class="relative flex-1 max-w-xl hidden sm:block">
       <Search :size="18" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
       <input type="text" placeholder="Cari produk, pelanggan, invoice..." class="input !pl-10 bg-white dark:bg-neutral-900 shadow-card border-neutral-100 dark:border-neutral-800" />
     </div>
+    <div class="flex-1 sm:hidden"></div>
 
     <div class="flex items-center gap-2 shrink-0">
       <div class="relative" ref="notifRef">

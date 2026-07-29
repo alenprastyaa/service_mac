@@ -221,8 +221,8 @@ onMounted(load);
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
-          <div class="col-span-2">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="sm:col-span-2">
             <label class="label">Model</label>
             <input v-model="form.model_name" required class="input" placeholder="MacBook Air M4" />
           </div>
@@ -244,7 +244,7 @@ onMounted(load);
           </div>
         </div>
 
-        <div class="grid grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label class="label">Baterai (%)</label>
             <input v-model.number="form.battery_pct" type="number" min="0" max="100" class="input" />
@@ -268,7 +268,7 @@ onMounted(load);
           <input v-model="form.serial_number" class="input" placeholder="C02XXXXXXX" />
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="label">Harga Modal</label>
             <input v-model.number="form.modal_price" type="number" min="0" class="input" />
@@ -303,16 +303,16 @@ onMounted(load);
           <h4 class="font-semibold text-lg">{{ viewing.model_name }}</h4>
           <span class="badge font-semibold" :class="STATUS_META[viewing.status]?.class">{{ STATUS_META[viewing.status]?.label }}</span>
         </div>
-        <dl class="grid grid-cols-2 gap-y-3 text-sm">
+        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-y-3 text-sm">
           <div><dt class="text-xs text-neutral-400">Spesifikasi</dt><dd>{{ specLine(viewing) }}</dd></div>
           <div><dt class="text-xs text-neutral-400">Warna</dt><dd>{{ viewing.color || '-' }}</dd></div>
           <div><dt class="text-xs text-neutral-400">Baterai</dt><dd>{{ viewing.battery_pct }}%</dd></div>
           <div><dt class="text-xs text-neutral-400">Cycle Count</dt><dd>{{ viewing.cycle_count }}</dd></div>
-          <div class="col-span-2"><dt class="text-xs text-neutral-400">Serial Number</dt><dd class="font-mono">{{ viewing.serial_number || '-' }}</dd></div>
+          <div class="sm:col-span-2"><dt class="text-xs text-neutral-400">Serial Number</dt><dd class="font-mono">{{ viewing.serial_number || '-' }}</dd></div>
           <div><dt class="text-xs text-neutral-400">Harga Modal</dt><dd>{{ formatCurrency(viewing.modal_price) }}</dd></div>
           <div><dt class="text-xs text-neutral-400">Harga Jual</dt><dd class="font-semibold text-brand-600 dark:text-brand-400">{{ formatCurrency(viewing.jual_price) }}</dd></div>
-          <div class="col-span-2" v-if="viewing.notes"><dt class="text-xs text-neutral-400">Catatan</dt><dd>{{ viewing.notes }}</dd></div>
-          <div class="col-span-2"><dt class="text-xs text-neutral-400">Ditambahkan</dt><dd>{{ formatDateTime(viewing.created_at) }}</dd></div>
+          <div class="sm:col-span-2" v-if="viewing.notes"><dt class="text-xs text-neutral-400">Catatan</dt><dd>{{ viewing.notes }}</dd></div>
+          <div class="sm:col-span-2"><dt class="text-xs text-neutral-400">Ditambahkan</dt><dd>{{ formatDateTime(viewing.created_at) }}</dd></div>
         </dl>
         <div class="flex justify-end pt-2">
           <button class="btn-secondary" @click="viewing = null">Tutup</button>

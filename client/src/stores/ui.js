@@ -14,5 +14,11 @@ export const useUiStore = defineStore('ui', {
       localStorage.setItem('oren_theme', this.dark ? 'dark' : 'light');
       this.applyTheme();
     },
+    toggleSidebar() {
+      this.sidebarOpen = !this.sidebarOpen;
+    },
+    closeSidebar() {
+      this.sidebarOpen = false;
+    },
   },
 });

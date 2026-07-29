@@ -2,13 +2,15 @@
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import {
-  LayoutGrid, Laptop, PackageSearch, PackagePlus, ShoppingCart, Laptop2, Users, Truck, BarChart3, Settings, ChevronRight,
+  LayoutGrid, Laptop, PackageSearch, PackagePlus, ShoppingCart, Laptop2, Users, Truck, BarChart3, Settings, ChevronRight, X,
 } from 'lucide-vue-next';
 import { useAuthStore } from '../stores/auth';
+import { useUiStore } from '../stores/ui';
 import logo from '../assets/logo.png';
 
 const route = useRoute();
 const auth = useAuthStore();
+const ui = useUiStore();
 
 const allItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutGrid },
@@ -28,9 +30,15 @@ const isActive = (to) => route.path === to;
 </script>
 
 <template>
-  <aside class="w-64 shrink-0 bg-white text-neutral-600 flex flex-col h-screen sticky top-0 border-r border-neutral-200">
-    <div class="px-5 py-5">
+  <aside
+    class="w-64 shrink-0 bg-white text-neutral-600 flex flex-col h-screen border-r border-neutral-200 fixed inset-y-0 left-0 z-40 transition-transform duration-200 lg:sticky lg:top-0 lg:translate-x-0"
+    :class="ui.sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+  >
+    <div class="px-5 py-5 flex items-center justify-between">
       <img :src="logo" alt="Oren MacStore" class="h-24 w-auto object-contain" />
+      <button class="lg:hidden w-9 h-9 rounded-lg flex items-center justify-center text-neutral-400 hover:bg-neutral-100 shrink-0" @click="ui.closeSidebar()">
+        <X :size="18" />
+      </button>
     </div>
 
     <nav class="flex-1 px-3 space-y-1 overflow-y-auto">

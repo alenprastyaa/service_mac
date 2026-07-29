@@ -311,8 +311,8 @@ onMounted(loadTickets);
           </div>
         </div>
 
-        <div class="grid grid-cols-3 gap-3">
-          <div class="col-span-2">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
             <label class="label">Model Perangkat</label>
             <input v-model="createForm.device_model" required class="input" placeholder="MacBook Air M1 13-inch" />
           </div>
@@ -334,7 +334,7 @@ onMounted(loadTickets);
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="label">Password / Login Perangkat</label>
             <input v-model="createForm.device_password" class="input" placeholder="Opsional, disimpan terenkripsi" />
@@ -417,15 +417,15 @@ onMounted(loadTickets);
               <h4 class="font-medium text-sm">Edit Info Perangkat</h4>
               <button type="button" class="text-neutral-400 hover:text-neutral-600" @click="editDeviceMode = false"><X :size="16" /></button>
             </div>
-            <div class="grid grid-cols-2 gap-2">
-              <input v-model="deviceForm.device_model" required placeholder="Model perangkat" class="input text-sm col-span-2" />
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input v-model="deviceForm.device_model" required placeholder="Model perangkat" class="input text-sm sm:col-span-2" />
               <input v-model="deviceForm.model_number" placeholder="Model number" class="input text-sm" />
               <input v-model="deviceForm.serial_number" placeholder="Serial number" class="input text-sm" />
               <input v-model="deviceForm.device_color" placeholder="Warna" class="input text-sm" />
               <input v-model="deviceForm.device_storage" placeholder="Storage / RAM" class="input text-sm" />
             </div>
             <textarea v-model="deviceForm.complaint" required rows="2" placeholder="Keluhan" class="input text-sm"></textarea>
-            <div class="grid grid-cols-2 gap-2">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <input v-model.number="deviceForm.estimated_cost" type="number" min="0" placeholder="Estimasi biaya" class="input text-sm" />
               <input v-model="deviceForm.checkup_estimate" placeholder="Estimasi pengecekan" class="input text-sm" />
             </div>
@@ -438,9 +438,9 @@ onMounted(loadTickets);
         </div>
 
         <!-- Aksi -->
-        <div class="flex gap-2">
-          <router-link :to="`/service-macbook/${detail.id}/nota`" class="btn-secondary text-xs flex-1"><Printer :size="14" /> Cetak Nota Penerimaan</router-link>
-          <button v-if="canDelete" class="btn-danger text-xs flex-1" @click="deleting = detail"><Trash2 :size="14" /> Hapus Tiket</button>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <router-link :to="`/service-macbook/${detail.id}/nota`" class="btn-secondary text-xs flex-1 justify-center"><Printer :size="14" /> Cetak Nota Penerimaan</router-link>
+          <button v-if="canDelete" class="btn-danger text-xs flex-1 justify-center" @click="deleting = detail"><Trash2 :size="14" /> Hapus Tiket</button>
         </div>
 
         <p v-if="detailError" class="text-sm text-red-500">{{ detailError }}</p>
