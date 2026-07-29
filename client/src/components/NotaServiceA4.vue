@@ -145,13 +145,6 @@ function maskedPassword(pwd) {
       </div>
     </div>
 
-    <!-- Rekening pembayaran -->
-    <div v-if="store.bank_account_number" class="rounded-xl border border-neutral-200 p-4 mt-4">
-      <h3 class="flex items-center gap-2 text-sm font-semibold text-brand-600 mb-1"><CreditCard :size="15" /> REKENING PEMBAYARAN</h3>
-      <p class="text-sm font-semibold">{{ store.bank_name }} {{ store.bank_account_number }}</p>
-      <p class="text-xs text-neutral-500">a.n. {{ store.bank_account_holder }}</p>
-    </div>
-
     <!-- Catatan & Persetujuan -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
       <div class="rounded-xl border border-neutral-200 p-4">
@@ -188,6 +181,12 @@ function maskedPassword(pwd) {
           <p class="text-neutral-400">Pelanggan</p>
         </div>
       </div>
+    </div>
+
+    <div v-if="store.bank_account_number" class="flex items-center gap-2 text-xs text-neutral-600 mt-4">
+      <CreditCard :size="14" class="text-brand-500 shrink-0" />
+      <span class="font-medium">{{ store.bank_name }} {{ store.bank_account_number }}</span>
+      <span class="text-neutral-400">a.n. {{ store.bank_account_holder }}</span>
     </div>
 
     <!-- Footer -->

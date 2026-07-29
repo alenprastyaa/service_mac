@@ -106,17 +106,15 @@ const statusLabel = computed(() => STATUS_LABELS[props.sale.status] || props.sal
         <div v-if="Number(sale.discount) > 0" class="flex justify-between text-orange-500"><span>Diskon</span><span>- {{ formatCurrency(sale.discount) }}</span></div>
         <div v-if="Number(sale.tax) > 0" class="flex justify-between text-neutral-500"><span>Pajak</span><span>{{ formatCurrency(sale.tax) }}</span></div>
         <div class="flex justify-between font-bold text-base border-t border-neutral-200 pt-2 mt-1"><span>TOTAL</span><span>{{ formatCurrency(sale.total) }}</span></div>
-        <div v-if="store.bank_account_number" class="rounded-lg border border-neutral-200 px-3 py-2 text-xs mt-2">
-          <p class="text-neutral-500 mb-0.5">Transfer ke :</p>
-          <p class="font-semibold">{{ store.bank_name }} {{ store.bank_account_number }}</p>
-          <p class="text-neutral-500">a.n. {{ store.bank_account_holder }}</p>
+        <div v-if="store.bank_account_number" class="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs mt-2">
+          <span class="text-neutral-500">Transfer:</span> <span class="font-semibold">{{ store.bank_name }} {{ store.bank_account_number }}</span> <span class="text-neutral-500">a.n. {{ store.bank_account_holder }}</span>
         </div>
       </div>
     </div>
 
-    <div class="flex justify-end mt-10">
+    <div class="flex justify-end mt-6">
       <div class="text-center text-sm">
-        <p class="text-neutral-500 mb-10">Hormat kami,<br /><span class="font-medium text-neutral-700">{{ store.store_name }}</span></p>
+        <p class="text-neutral-500 mb-6">Hormat kami,<br /><span class="font-medium text-neutral-700">{{ store.store_name }}</span></p>
         <p class="border-t border-neutral-300 pt-1 font-medium">{{ sale.created_by_name || '-' }}</p>
         <p class="text-neutral-400 text-xs">{{ ROLE_LABELS[sale.created_by_role] || '-' }}</p>
       </div>
