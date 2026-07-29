@@ -57,6 +57,12 @@ const receivedDate = computed(() => formatDate(props.service.received_at));
       <span>{{ service.checkup_estimate }}</span>
     </div>
 
+    <div v-if="store.bank_account_number" class="mt-3 border border-dashed border-neutral-300 rounded-xl px-3 py-2 text-[11px]">
+      <p class="text-neutral-500 mb-0.5">Transfer ke :</p>
+      <p class="font-semibold">{{ store.bank_name }} {{ store.bank_account_number }}</p>
+      <p class="text-neutral-500">a.n. {{ store.bank_account_holder }}</p>
+    </div>
+
     <div v-if="qrDataUrl" class="flex flex-col items-center mt-4 pt-3 border-t border-dashed border-neutral-300">
       <img :src="qrDataUrl" alt="QR cek status" class="w-24 h-24 rounded-lg border border-neutral-200 mb-1.5" />
       <p class="text-[11px] text-neutral-500 text-center">Scan untuk cek status service</p>

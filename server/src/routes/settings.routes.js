@@ -7,5 +7,6 @@ router.use(authRequired);
 router.get('/store', asyncHandler(ctrl.getStore));
 router.put('/store', requireRole('owner', 'admin'), asyncHandler(ctrl.updateStore));
 router.put('/target', requireRole('owner'), asyncHandler(ctrl.updateTarget));
+router.put('/bank', requireRole('owner'), asyncHandler(ctrl.updateBank));
 
 module.exports = router;

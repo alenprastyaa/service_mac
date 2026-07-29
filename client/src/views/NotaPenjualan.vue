@@ -146,6 +146,9 @@ onMounted(() => load(route.params.id));
                 <span class="flex items-center gap-1.5 text-xs text-emerald-700"><CheckCircle2 :size="13" /> Pembayaran: {{ paymentLabel }}</span>
                 <span class="badge bg-emerald-100 text-emerald-700 text-[10px]">{{ statusLabel }}</span>
               </div>
+              <div v-if="store.bank_account_number" class="mt-2 pt-2 border-t border-dashed border-neutral-200 text-xs">
+                <p class="text-neutral-500">Transfer ke: <span class="font-medium text-neutral-700">{{ store.bank_name }} {{ store.bank_account_number }}</span> a.n. {{ store.bank_account_holder }}</p>
+              </div>
             </div>
             <p class="text-xs text-neutral-500 mt-2 px-1">Terima kasih atas kepercayaan Anda 🙏</p>
           </div>

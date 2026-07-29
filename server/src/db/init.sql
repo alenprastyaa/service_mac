@@ -24,6 +24,9 @@ CREATE TABLE IF NOT EXISTS store_settings (
   intake_notice TEXT,
   consent_text TEXT,
   monthly_omzet_target DECIMAL(14,2) NOT NULL DEFAULT 0,
+  bank_name VARCHAR(50),
+  bank_account_number VARCHAR(50),
+  bank_account_holder VARCHAR(100),
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 

@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import {
   MapPin, Phone, Globe, Instagram, User, Info, Laptop2, AlertCircle, Monitor, PackageCheck,
-  Lock, Eye, EyeOff, Clock, ShieldCheck, Sparkles, CheckCircle2,
+  Lock, Eye, EyeOff, Clock, ShieldCheck, Sparkles, CheckCircle2, CreditCard,
 } from 'lucide-vue-next';
 import { formatDate, CHECKLIST_STATUS_LABELS } from '../lib/format';
 import logo from '../assets/logo.png';
@@ -143,6 +143,13 @@ function maskedPassword(pwd) {
         <p class="text-2xl font-bold my-1">{{ service.checkup_estimate }}</p>
         <p class="text-[11px] text-neutral-400">Kami akan menghubungi Anda setelah proses pengecekan selesai.</p>
       </div>
+    </div>
+
+    <!-- Rekening pembayaran -->
+    <div v-if="store.bank_account_number" class="rounded-xl border border-neutral-200 p-4 mt-4">
+      <h3 class="flex items-center gap-2 text-sm font-semibold text-brand-600 mb-1"><CreditCard :size="15" /> REKENING PEMBAYARAN</h3>
+      <p class="text-sm font-semibold">{{ store.bank_name }} {{ store.bank_account_number }}</p>
+      <p class="text-xs text-neutral-500">a.n. {{ store.bank_account_holder }}</p>
     </div>
 
     <!-- Catatan & Persetujuan -->

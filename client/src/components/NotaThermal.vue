@@ -72,6 +72,12 @@ const paymentLabel = computed(() => PAYMENT_METHOD_LABELS[props.sale.payment_met
       </div>
     </div>
 
+    <div v-if="store.bank_account_number" class="mt-3 border border-dashed border-neutral-300 rounded-xl px-3 py-2 text-[11px]">
+      <p class="text-neutral-500 mb-0.5">Transfer ke :</p>
+      <p class="font-semibold">{{ store.bank_name }} {{ store.bank_account_number }}</p>
+      <p class="text-neutral-500">a.n. {{ store.bank_account_holder }}</p>
+    </div>
+
     <div class="text-center mt-5 pt-3 border-t border-dashed border-neutral-300">
       <p class="italic text-neutral-600">Terima kasih</p>
       <p class="text-[11px] text-neutral-500 mt-0.5">atas kepercayaan Anda ❤️</p>

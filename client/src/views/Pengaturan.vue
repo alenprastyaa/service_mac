@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Moon, Sun, Plus, Pencil, KeyRound, Store, ClipboardList, Trash2, ChevronUp, ChevronDown, Monitor, PackageCheck } from 'lucide-vue-next';
+import { Moon, Sun, Plus, Pencil, KeyRound, Store, ClipboardList, Trash2, ChevronUp, ChevronDown, Monitor, PackageCheck, Landmark } from 'lucide-vue-next';
 import api from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { useUiStore } from '../stores/ui';
@@ -117,6 +117,30 @@ async function saveStore() {
     storeError.value = err.response?.data?.error || 'Gagal menyimpan profil toko';
   } finally {
     storeSaving.value = false;
+  }
+}
+
+// Bank account (nota payment info) — owner only, shown on every printed/digital nota.
+const bankSaving = ref(false);
+const bankSuccess = ref('');
+const bankError = ref('');
+
+async function saveBank() {
+  bankSaving.value = true;
+  bankSuccess.value = '';
+  bankError.value = '';
+  try {
+    const { data } = await api.put('/settings/bank', {
+      bank_name: storeForm.value.bank_name,
+      bank_account_number: storeForm.value.bank_account_number,
+      bank_account_holder: storeForm.value.bank_account_holder,
+    });
+    storeForm.value = { ...storeForm.value, ...data };
+    bankSuccess.value = 'Rekening berhasil disimpan.';
+  } catch (err) {
+    bankError.value = err.response?.data?.error || 'Gagal menyimpan rekening';
+  } finally {
+    bankSaving.value = false;
   }
 }
 
@@ -263,6 +287,28 @@ onMounted(() => {
       <p v-if="storeError" class="text-sm text-red-500 mt-3">{{ storeError }}</p>
       <p v-if="storeSuccess" class="text-sm text-emerald-600 mt-3">{{ storeSuccess }}</p>
       <button class="btn-primary mt-4" :disabled="storeSaving" @click="saveStore">Simpan Profil Toko</button>
+    </div>
+
+    <div v-if="isOwner && storeForm" class="card p-5 mb-4">
+      <h3 class="font-semibold mb-1 flex items-center gap-2"><Landmark :size="17" class="text-brand-500" /> Rekening Pembayaran</h3>
+      <p class="text-xs text-neutral-500 mb-4">Tampil di semua nota — penjualan &amp; service (thermal, PDF, dan WhatsApp).</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="label">Nama Bank</label>
+          <input v-model="storeForm.bank_name" placeholder="cth. BCA" class="input" />
+        </div>
+        <div>
+          <label class="label">Nomor Rekening</label>
+          <input v-model="storeForm.bank_account_number" placeholder="cth. 1234567890" class="input" />
+        </div>
+        <div class="sm:col-span-2">
+          <label class="label">Atas Nama</label>
+          <input v-model="storeForm.bank_account_holder" placeholder="cth. Arif Wijaya" class="input" />
+        </div>
+      </div>
+      <p v-if="bankError" class="text-sm text-red-500 mt-3">{{ bankError }}</p>
+      <p v-if="bankSuccess" class="text-sm text-emerald-600 mt-3">{{ bankSuccess }}</p>
+      <button class="btn-primary mt-4" :disabled="bankSaving" @click="saveBank">Simpan Rekening</button>
     </div>
 
     <div v-if="isOwnerOrAdmin" class="card p-5 mb-4">

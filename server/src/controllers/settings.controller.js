@@ -44,4 +44,24 @@ async function updateTarget(req, res) {
   res.json(rows[0]);
 }
 
-module.exports = { getStore, updateStore, updateTarget };
+async function updateBank(req, res) {
+  const { bank_name, bank_account_number, bank_account_holder } = req.body;
+  const [existing] = await pool.query('SELECT * FROM store_settings WHERE id = 1');
+  const current = existing[0] || {};
+
+  await pool.query(
+    `INSERT INTO store_settings (id, bank_name, bank_account_number, bank_account_holder)
+     VALUES (1, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE bank_name = VALUES(bank_name), bank_account_number = VALUES(bank_account_number),
+       bank_account_holder = VALUES(bank_account_holder)`,
+    [
+      bank_name ?? current.bank_name ?? null,
+      bank_account_number ?? current.bank_account_number ?? null,
+      bank_account_holder ?? current.bank_account_holder ?? null,
+    ]
+  );
+  const [rows] = await pool.query('SELECT * FROM store_settings WHERE id = 1');
+  res.json(rows[0]);
+}
+
+module.exports = { getStore, updateStore, updateTarget, updateBank };

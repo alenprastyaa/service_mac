@@ -20,6 +20,9 @@ const INDEXES = [
 // already existed before this column was introduced.
 const COLUMNS = [
   'ALTER TABLE store_settings ADD COLUMN monthly_omzet_target DECIMAL(14,2) NOT NULL DEFAULT 0',
+  'ALTER TABLE store_settings ADD COLUMN bank_name VARCHAR(50)',
+  'ALTER TABLE store_settings ADD COLUMN bank_account_number VARCHAR(50)',
+  'ALTER TABLE store_settings ADD COLUMN bank_account_holder VARCHAR(100)',
 ];
 
 // Creates the database and all tables if they don't exist yet. Safe to run on every

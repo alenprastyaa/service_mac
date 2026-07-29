@@ -29,6 +29,9 @@ export function buildSaleWaMessage(sale, store) {
   if (Number(sale.tax) > 0) lines.push(`Pajak: ${formatCurrency(sale.tax)}`);
   lines.push(`*TOTAL: ${formatCurrency(sale.total)}*`, '');
   lines.push(`Pembayaran: ${paymentLabel} (${statusLabel})`, '');
+  if (store.bank_account_number) {
+    lines.push(`Transfer ke: ${store.bank_name || ''} ${store.bank_account_number} a.n. ${store.bank_account_holder || ''}`, '');
+  }
   lines.push('Terima kasih atas kepercayaan Anda 🙏');
   return lines.join('\n');
 }
@@ -49,6 +52,9 @@ export function buildServiceWaMessage(service, store, checkUrl) {
   lines.push(`Keluhan: ${service.complaint}`);
   lines.push(`Estimasi Pengecekan: ${service.checkup_estimate}`, '');
   lines.push(`Status saat ini: *${STATUS_LABELS[service.status] || service.status}*`, '');
+  if (store.bank_account_number) {
+    lines.push(`Transfer ke: ${store.bank_name || ''} ${store.bank_account_number} a.n. ${store.bank_account_holder || ''}`, '');
+  }
   if (checkUrl) lines.push(`Cek status kapan saja di: ${checkUrl}`, '');
   lines.push('Terima kasih atas kepercayaan Anda 🙏');
   return lines.join('\n');

@@ -106,6 +106,11 @@ const statusLabel = computed(() => STATUS_LABELS[props.sale.status] || props.sal
         <div v-if="Number(sale.discount) > 0" class="flex justify-between text-orange-500"><span>Diskon</span><span>- {{ formatCurrency(sale.discount) }}</span></div>
         <div v-if="Number(sale.tax) > 0" class="flex justify-between text-neutral-500"><span>Pajak</span><span>{{ formatCurrency(sale.tax) }}</span></div>
         <div class="flex justify-between font-bold text-base border-t border-neutral-200 pt-2 mt-1"><span>TOTAL</span><span>{{ formatCurrency(sale.total) }}</span></div>
+        <div v-if="store.bank_account_number" class="rounded-lg border border-neutral-200 px-3 py-2 text-xs mt-2">
+          <p class="text-neutral-500 mb-0.5">Transfer ke :</p>
+          <p class="font-semibold">{{ store.bank_name }} {{ store.bank_account_number }}</p>
+          <p class="text-neutral-500">a.n. {{ store.bank_account_holder }}</p>
+        </div>
       </div>
     </div>
 
