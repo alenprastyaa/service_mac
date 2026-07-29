@@ -122,8 +122,6 @@ onMounted(() => load(route.params.id));
           </div>
           <div class="p-4">
             <div class="bg-white rounded-xl p-4 text-sm shadow">
-              <p class="text-center font-bold text-brand-500 mb-0.5">{{ store.store_name }}</p>
-              <p class="text-center text-[10px] tracking-[0.25em] text-neutral-400 font-semibold mb-3">SOLO</p>
               <div class="flex justify-between text-xs text-neutral-500 border-b border-dashed border-neutral-200 pb-2 mb-2">
                 <span class="font-medium text-neutral-700">{{ sale.invoice_no }}</span>
                 <span>{{ saleDate }} • {{ saleTime }}</span>

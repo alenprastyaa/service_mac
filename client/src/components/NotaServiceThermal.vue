@@ -15,12 +15,8 @@ const receivedDate = computed(() => formatDate(props.service.received_at));
 
 <template>
   <div class="thermal-page mx-auto rounded-2xl shadow-card border border-neutral-100 p-5 text-neutral-900 text-sm">
-    <div class="flex items-center justify-center gap-2 pb-2">
-      <img :src="logo" alt="logo" class="w-10 h-10 rounded-xl object-contain shrink-0" />
-      <div class="text-left leading-tight">
-        <p class="text-lg font-extrabold text-brand-500">{{ store.store_name }}</p>
-        <p class="text-[10px] tracking-[0.25em] text-neutral-400 font-semibold">SOLO</p>
-      </div>
+    <div class="flex items-center justify-center pb-2">
+      <img :src="logo" :alt="store.store_name" class="h-14 w-auto object-contain" />
     </div>
     <p class="text-center text-xs text-neutral-500 pb-3">{{ store.tagline }}</p>
     <div class="text-center text-[11px] text-neutral-500 space-y-0.5 pb-3">

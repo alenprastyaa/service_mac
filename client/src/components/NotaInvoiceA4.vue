@@ -20,12 +20,8 @@ const statusLabel = computed(() => STATUS_LABELS[props.sale.status] || props.sal
   <div class="nota-page mx-auto rounded-2xl shadow-card border border-neutral-100 p-8 text-neutral-900">
     <div class="flex items-start justify-between flex-wrap gap-4 pb-5 border-b border-neutral-200">
       <div class="flex items-center gap-3">
-        <img :src="logo" alt="logo" class="h-14 w-14 object-contain" />
-        <div>
-          <p class="text-xl font-extrabold text-brand-500 leading-tight">{{ store.store_name }}</p>
-          <p class="text-[10px] tracking-[0.25em] text-neutral-400 font-semibold">SOLO</p>
-          <p class="text-xs text-neutral-500 mt-1">{{ store.tagline }}</p>
-        </div>
+        <img :src="logo" :alt="store.store_name" class="h-16 w-auto object-contain" />
+        <p class="text-xs text-neutral-500">{{ store.tagline }}</p>
       </div>
       <div class="text-right">
         <h1 class="text-2xl font-bold text-neutral-800">INVOICE</h1>
