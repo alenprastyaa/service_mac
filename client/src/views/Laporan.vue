@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch, nextTick } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { Download, FileText } from 'lucide-vue-next';
 import api from '../lib/api';
 import EmptyState from '../components/EmptyState.vue';
@@ -10,7 +10,7 @@ import LaporanProfitPdf from '../components/LaporanProfitPdf.vue';
 import LaporanStokPdf from '../components/LaporanStokPdf.vue';
 import LaporanServicePdf from '../components/LaporanServicePdf.vue';
 import LaporanHutangPiutangPdf from '../components/LaporanHutangPiutangPdf.vue';
-import { downloadElementAsA4Pdf } from '../lib/pdf';
+import { buildSalesReportPdf, buildProfitReportPdf, buildStockReportPdf, buildServiceReportPdf, buildDebtsReportPdf } from '../lib/reportPdf';
 import { useStoreSettingsStore } from '../stores/storeSettings';
 import { formatCurrency, formatDateTime, formatDate } from '../lib/format';
 
@@ -23,11 +23,11 @@ const TABS = [
 ];
 const NO_DATE_RANGE_TABS = ['stock', 'hutang-piutang'];
 const PDF_META = {
-  sales: { title: 'Laporan Penjualan', component: LaporanPenjualanPdf, filename: 'Laporan-Penjualan' },
-  profit: { title: 'Laporan Profit', component: LaporanProfitPdf, filename: 'Laporan-Profit' },
-  stock: { title: 'Laporan Stok', component: LaporanStokPdf, filename: 'Laporan-Stok' },
-  service: { title: 'Laporan Service', component: LaporanServicePdf, filename: 'Laporan-Service' },
-  'hutang-piutang': { title: 'Laporan Hutang Piutang', component: LaporanHutangPiutangPdf, filename: 'Laporan-Hutang-Piutang' },
+  sales: { title: 'Laporan Penjualan', component: LaporanPenjualanPdf, filename: 'Laporan-Penjualan', build: buildSalesReportPdf },
+  profit: { title: 'Laporan Profit', component: LaporanProfitPdf, filename: 'Laporan-Profit', build: buildProfitReportPdf },
+  stock: { title: 'Laporan Stok', component: LaporanStokPdf, filename: 'Laporan-Stok', build: buildStockReportPdf },
+  service: { title: 'Laporan Service', component: LaporanServicePdf, filename: 'Laporan-Service', build: buildServiceReportPdf },
+  'hutang-piutang': { title: 'Laporan Hutang Piutang', component: LaporanHutangPiutangPdf, filename: 'Laporan-Hutang-Piutang', build: buildDebtsReportPdf },
 };
 
 const storeSettings = useStoreSettingsStore();
@@ -64,9 +64,10 @@ async function exportCsv() {
   URL.revokeObjectURL(url);
 }
 
-// Modern PDF report — one printable design per tab, picked via PDF_META
+// Modern PDF report — one printable design per tab, picked via PDF_META. Built
+// as real vector text/tables (jspdf-autotable), not a screenshot of the preview
+// below, so pagination is always correct and file size stays small.
 const showPdfPreview = ref(false);
-const pdfRef = ref(null);
 const pdfDownloading = ref(false);
 
 async function openPdfPreview() {
@@ -77,8 +78,8 @@ async function openPdfPreview() {
 async function downloadPdf() {
   pdfDownloading.value = true;
   try {
-    await nextTick();
-    await downloadElementAsA4Pdf(pdfRef.value.$el, `${PDF_META[tab.value].filename}-${to.value}.pdf`);
+    const doc = await PDF_META[tab.value].build(rows.value, storeSettings.data || {}, from.value, to.value);
+    doc.save(`${PDF_META[tab.value].filename}-${to.value}.pdf`);
   } finally {
     pdfDownloading.value = false;
   }
@@ -253,7 +254,7 @@ onMounted(load);
 
     <Modal v-if="showPdfPreview" :title="PDF_META[tab].title" size="xl" @close="showPdfPreview = false">
       <div class="space-y-4">
-        <component :is="PDF_META[tab].component" ref="pdfRef" :rows="rows" :store="storeSettings.data || {}" :from="from" :to="to" />
+        <component :is="PDF_META[tab].component" :rows="rows" :store="storeSettings.data || {}" :from="from" :to="to" />
         <div class="flex justify-end gap-2">
           <button class="btn-secondary" @click="showPdfPreview = false">Tutup</button>
           <button class="btn-primary" :disabled="pdfDownloading" @click="downloadPdf">
