@@ -81,4 +81,15 @@ async function serviceReport(req, res) {
   sendReport(req, res, rows, 'laporan-service');
 }
 
-module.exports = { salesReport, profitReport, stockReport, serviceReport };
+async function debtsReport(req, res) {
+  const [rows] = await pool.query(
+    `SELECT sd.id, s.code AS supplier_code, s.name AS supplier, s.phone AS supplier_phone,
+        sd.amount, sd.description, sd.due_date, sd.status, sd.paid_at, sd.created_at
+     FROM supplier_debts sd
+     JOIN suppliers s ON s.id = sd.supplier_id
+     ORDER BY sd.status ASC, sd.due_date IS NULL, sd.due_date ASC, sd.created_at DESC`
+  );
+  sendReport(req, res, rows, 'laporan-hutang-piutang');
+}
+
+module.exports = { salesReport, profitReport, stockReport, serviceReport, debtsReport };

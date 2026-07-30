@@ -8,5 +8,6 @@ router.get('/sales', asyncHandler(ctrl.salesReport));
 router.get('/profit', asyncHandler(ctrl.profitReport));
 router.get('/stock', asyncHandler(ctrl.stockReport));
 router.get('/service', asyncHandler(ctrl.serviceReport));
+router.get('/hutang-piutang', asyncHandler(ctrl.debtsReport));
 
 module.exports = router;

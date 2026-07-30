@@ -1,18 +1,25 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue';
-import { Download } from 'lucide-vue-next';
+import { ref, onMounted, watch, nextTick } from 'vue';
+import { Download, FileText } from 'lucide-vue-next';
 import api from '../lib/api';
 import EmptyState from '../components/EmptyState.vue';
 import StatusBadge from '../components/StatusBadge.vue';
-import { formatCurrency, formatDateTime } from '../lib/format';
+import Modal from '../components/Modal.vue';
+import LaporanHutangPiutangPdf from '../components/LaporanHutangPiutangPdf.vue';
+import { downloadElementAsA4Pdf } from '../lib/pdf';
+import { useStoreSettingsStore } from '../stores/storeSettings';
+import { formatCurrency, formatDateTime, formatDate } from '../lib/format';
 
 const TABS = [
   { value: 'sales', label: 'Penjualan' },
   { value: 'profit', label: 'Profit' },
   { value: 'stock', label: 'Stok' },
   { value: 'service', label: 'Service' },
+  { value: 'hutang-piutang', label: 'Hutang Piutang' },
 ];
+const NO_DATE_RANGE_TABS = ['stock', 'hutang-piutang'];
 
+const storeSettings = useStoreSettingsStore();
 const tab = ref('sales');
 const from = ref(defaultFrom());
 const to = ref(new Date().toISOString().slice(0, 10));
@@ -23,6 +30,10 @@ function defaultFrom() {
   const d = new Date();
   d.setDate(d.getDate() - 29);
   return d.toISOString().slice(0, 10);
+}
+
+function isOverdue(d) {
+  return d.status === 'belum_lunas' && d.due_date && new Date(d.due_date) < new Date(new Date().toDateString());
 }
 
 async function load() {
@@ -42,6 +53,26 @@ async function exportCsv() {
   URL.revokeObjectURL(url);
 }
 
+// Modern PDF report — Hutang Piutang only
+const showPdfPreview = ref(false);
+const pdfRef = ref(null);
+const pdfDownloading = ref(false);
+
+async function openPdfPreview() {
+  await storeSettings.fetch();
+  showPdfPreview.value = true;
+}
+
+async function downloadPdf() {
+  pdfDownloading.value = true;
+  try {
+    await nextTick();
+    await downloadElementAsA4Pdf(pdfRef.value.$el, `Laporan-Hutang-Piutang-${to.value}.pdf`);
+  } finally {
+    pdfDownloading.value = false;
+  }
+}
+
 watch([tab, from, to], load);
 onMounted(load);
 </script>
@@ -53,11 +84,14 @@ onMounted(load);
         <h1 class="text-2xl font-bold">Laporan</h1>
         <p class="text-sm text-neutral-500">Analisis penjualan, profit, stok, dan service.</p>
       </div>
-      <button class="btn-secondary" @click="exportCsv"><Download :size="16" /> Export CSV</button>
+      <div class="flex items-center gap-2">
+        <button v-if="tab === 'hutang-piutang'" class="btn-primary" @click="openPdfPreview"><FileText :size="16" /> Generate Laporan PDF</button>
+        <button class="btn-secondary" @click="exportCsv"><Download :size="16" /> Export CSV</button>
+      </div>
     </div>
 
     <div class="card p-4 mb-4 flex flex-wrap items-center gap-3">
-      <div class="flex gap-2">
+      <div class="flex gap-2 flex-wrap">
         <button
           v-for="t in TABS"
           :key="t.value"
@@ -68,7 +102,7 @@ onMounted(load);
           {{ t.label }}
         </button>
       </div>
-      <div v-if="tab !== 'stock'" class="flex items-center gap-2 ml-auto text-sm">
+      <div v-if="!NO_DATE_RANGE_TABS.includes(tab)" class="flex items-center gap-2 ml-auto text-sm">
         <input v-model="from" type="date" class="input w-auto" />
         <span class="text-neutral-400">s/d</span>
         <input v-model="to" type="date" class="input w-auto" />
@@ -171,6 +205,51 @@ onMounted(load);
           </tbody>
         </table>
       </div>
+
+      <div v-else-if="tab === 'hutang-piutang'" class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-neutral-400 text-xs uppercase">
+              <th class="px-2 py-2 font-medium">Supplier</th>
+              <th class="px-2 py-2 font-medium">Keterangan</th>
+              <th class="px-2 py-2 font-medium text-right">Nominal</th>
+              <th class="px-2 py-2 font-medium">Jatuh Tempo</th>
+              <th class="px-2 py-2 font-medium">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="r in rows" :key="r.id" class="border-t border-neutral-100 dark:border-neutral-800" :class="isOverdue(r) && 'bg-red-50/50 dark:bg-red-950/20'">
+              <td class="px-2 py-2.5">
+                <p class="font-medium">{{ r.supplier }}</p>
+                <p class="text-xs text-neutral-400">{{ r.supplier_code }}</p>
+              </td>
+              <td class="px-2 py-2.5 text-neutral-500">{{ r.description || '-' }}</td>
+              <td class="px-2 py-2.5 text-right font-medium">{{ formatCurrency(r.amount) }}</td>
+              <td class="px-2 py-2.5 text-neutral-500">
+                {{ r.due_date ? formatDate(r.due_date) : '-' }}
+                <span v-if="isOverdue(r)" class="block text-xs text-red-500 font-medium">Lewat jatuh tempo</span>
+              </td>
+              <td class="px-2 py-2.5">
+                <span class="badge font-medium" :class="r.status === 'lunas' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'">
+                  {{ r.status === 'lunas' ? 'Lunas' : 'Belum Lunas' }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
+
+    <Modal v-if="showPdfPreview" title="Laporan Hutang Piutang" size="xl" @close="showPdfPreview = false">
+      <div class="space-y-4">
+        <LaporanHutangPiutangPdf ref="pdfRef" :debts="rows" :store="storeSettings.data || {}" />
+        <div class="flex justify-end gap-2">
+          <button class="btn-secondary" @click="showPdfPreview = false">Tutup</button>
+          <button class="btn-primary" :disabled="pdfDownloading" @click="downloadPdf">
+            <Download :size="16" /> {{ pdfDownloading ? 'Membuat PDF...' : 'Download PDF' }}
+          </button>
+        </div>
+      </div>
+    </Modal>
   </div>
 </template>
