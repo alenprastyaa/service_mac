@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import { Search, Plus, Pencil, Trash2, Box, Eye, ScanLine } from 'lucide-vue-next';
 import api from '../lib/api';
 import { useAuthStore } from '../stores/auth';
@@ -12,11 +13,13 @@ import ScanBarcodeModal from '../components/ScanBarcodeModal.vue';
 import { formatCurrency, formatDateTime } from '../lib/format';
 
 const auth = useAuthStore();
+const route = useRoute();
 const canEdit = computed(() => auth.can('owner', 'admin'));
 
 const products = ref([]);
 const search = ref('');
 const category = ref('');
+const lowStockOnly = ref(route.query.lowStock === 'true');
 const loading = ref(true);
 
 const showModal = ref(false);
@@ -46,7 +49,9 @@ const categories = computed(() => [...new Set(products.value.map((p) => p.catego
 
 async function load() {
   loading.value = true;
-  const { data } = await api.get('/products', { params: { search: search.value, category: category.value } });
+  const { data } = await api.get('/products', {
+    params: { search: search.value, category: category.value, lowStock: lowStockOnly.value ? 'true' : '' },
+  });
   products.value = data;
   loading.value = false;
 }
@@ -124,6 +129,10 @@ onMounted(load);
         <option value="">Semua Kategori</option>
         <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
       </select>
+      <label class="flex items-center gap-2 text-sm px-3 rounded-xl border border-neutral-200 dark:border-neutral-700 cursor-pointer select-none">
+        <input type="checkbox" v-model="lowStockOnly" @change="load" class="accent-brand-500" />
+        Stok Menipis
+      </label>
     </div>
 
     <div class="card p-5">

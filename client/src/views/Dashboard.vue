@@ -225,7 +225,7 @@ const serviceRows = computed(() => {
     <div class="card-glossy p-5">
       <div class="flex items-center justify-between mb-4">
         <h3 class="font-semibold">Stok Sparepart Menipis</h3>
-        <router-link to="/part-macbook" class="text-xs font-medium text-brand-500 hover:underline">Lihat Semua</router-link>
+        <router-link :to="{ path: '/part-macbook', query: { lowStock: 'true' } }" class="text-xs font-medium text-brand-500 hover:underline">Lihat Semua</router-link>
       </div>
       <EmptyState v-if="!summary.low_stock_products.length" message="Semua stok sparepart aman." />
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
