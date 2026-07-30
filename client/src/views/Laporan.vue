@@ -10,7 +10,7 @@ import LaporanProfitPdf from '../components/LaporanProfitPdf.vue';
 import LaporanStokPdf from '../components/LaporanStokPdf.vue';
 import LaporanServicePdf from '../components/LaporanServicePdf.vue';
 import LaporanHutangPiutangPdf from '../components/LaporanHutangPiutangPdf.vue';
-import { downloadElementAsA4Pdf } from '../lib/pdf';
+import { downloadElementAsPaginatedA4Pdf } from '../lib/pdf';
 import { useStoreSettingsStore } from '../stores/storeSettings';
 import { formatCurrency, formatDateTime, formatDate } from '../lib/format';
 
@@ -78,7 +78,7 @@ async function downloadPdf() {
   pdfDownloading.value = true;
   try {
     await nextTick();
-    await downloadElementAsA4Pdf(pdfRef.value.$el, `${PDF_META[tab.value].filename}-${to.value}.pdf`);
+    await downloadElementAsPaginatedA4Pdf(pdfRef.value.$el, `${PDF_META[tab.value].filename}-${to.value}.pdf`);
   } finally {
     pdfDownloading.value = false;
   }

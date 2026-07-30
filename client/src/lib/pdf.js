@@ -39,3 +39,22 @@ export async function downloadElementAsA4Pdf(el, filename) {
 
   pdf.save(filename);
 }
+
+// Captures `el` as a real HTML-paginated A4 PDF — jsPDF measures actual content
+// (text baselines) to decide where to break pages, so a long table splits
+// between rows instead of slicing straight through the middle of one like
+// downloadElementAsA4Pdf's fixed-height image slicing does. Used for long
+// report tables (Laporan) rather than short one-page nota.
+export async function downloadElementAsPaginatedA4Pdf(el, filename) {
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  await pdf.html(el, {
+    x: 0,
+    y: 0,
+    width: pageWidth,
+    windowWidth: el.scrollWidth,
+    autoPaging: 'text',
+    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+  });
+  pdf.save(filename);
+}
