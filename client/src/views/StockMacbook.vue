@@ -170,7 +170,6 @@ onMounted(load);
         <option value="">Semua Status</option>
         <option value="ready">Ready</option>
         <option value="terjual">Terjual</option>
-        <option value="service">Service</option>
       </select>
     </div>
 
@@ -292,7 +291,6 @@ onMounted(load);
             <select v-model="form.status" class="input">
               <option value="ready">Ready</option>
               <option value="terjual">Terjual</option>
-              <option value="service">Service</option>
             </select>
           </div>
         </div>
