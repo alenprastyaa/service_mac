@@ -131,7 +131,7 @@ function logout() {
         </div>
       </div>
 
-      <p v-if="storeSettings.data?.address" class="hidden md:block text-xs text-neutral-500 max-w-[220px] truncate" :title="storeSettings.data.address">
+      <p v-if="storeSettings.data?.address" class="hidden lg:block text-sm text-neutral-500 dark:text-neutral-400 max-w-xs leading-snug line-clamp-2" :title="storeSettings.data.address">
         {{ storeSettings.data.address }}
       </p>
     </div>
