@@ -4,20 +4,24 @@ import { formatCurrency, formatDate, formatDateTime } from '../lib/format';
 import logo from '../assets/logo.png';
 
 const props = defineProps({
-  debts: { type: Array, required: true },
+  rows: { type: Array, required: true },
   store: { type: Object, required: true },
+  // Hutang piutang is a snapshot, not date-ranged — accepted so Laporan.vue can
+  // pass the same prop set to every report component uniformly.
+  from: { type: String, default: '' },
+  to: { type: String, default: '' },
 });
 
 function isOverdue(d) {
   return d.status === 'belum_lunas' && d.due_date && new Date(d.due_date) < new Date(new Date().toDateString());
 }
 
-const unpaid = computed(() => props.debts.filter((d) => d.status === 'belum_lunas'));
-const paid = computed(() => props.debts.filter((d) => d.status === 'lunas'));
+const unpaid = computed(() => props.rows.filter((d) => d.status === 'belum_lunas'));
+const paid = computed(() => props.rows.filter((d) => d.status === 'lunas'));
 const totalUnpaid = computed(() => unpaid.value.reduce((sum, d) => sum + Number(d.amount), 0));
 const totalPaid = computed(() => paid.value.reduce((sum, d) => sum + Number(d.amount), 0));
 const totalAll = computed(() => totalUnpaid.value + totalPaid.value);
-const overdueCount = computed(() => props.debts.filter(isOverdue).length);
+const overdueCount = computed(() => props.rows.filter(isOverdue).length);
 const generatedAt = computed(() => formatDateTime(new Date()));
 </script>
 
@@ -47,12 +51,12 @@ const generatedAt = computed(() => formatDateTime(new Date()));
       <div class="rounded-xl p-4 bg-gradient-to-br from-neutral-700 to-neutral-900 text-white">
         <p class="text-xs opacity-90">Total Keseluruhan</p>
         <p class="text-lg font-bold mt-1 truncate">{{ formatCurrency(totalAll) }}</p>
-        <p class="text-[11px] opacity-80 mt-0.5">{{ debts.length }} transaksi</p>
+        <p class="text-[11px] opacity-80 mt-0.5">{{ rows.length }} transaksi</p>
       </div>
     </div>
 
     <!-- Table -->
-    <table v-if="debts.length" class="w-full text-sm mt-6 rounded-xl overflow-hidden">
+    <table v-if="rows.length" class="w-full text-sm mt-6 rounded-xl overflow-hidden">
       <thead>
         <tr class="bg-brand-500 text-white text-xs uppercase">
           <th class="px-3 py-2.5 text-left font-medium">Supplier</th>
@@ -63,7 +67,7 @@ const generatedAt = computed(() => formatDateTime(new Date()));
         </tr>
       </thead>
       <tbody>
-        <tr v-for="d in debts" :key="d.id" class="border-b border-neutral-100 last:border-0" :class="isOverdue(d) ? 'bg-red-50' : ''">
+        <tr v-for="d in rows" :key="d.id" class="border-b border-neutral-100 last:border-0" :class="isOverdue(d) ? 'bg-red-50' : ''">
           <td class="px-3 py-2.5">
             <p class="font-medium">{{ d.supplier }}</p>
             <p class="text-xs text-neutral-400">{{ d.supplier_code }}</p>

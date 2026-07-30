@@ -5,6 +5,10 @@ import api from '../lib/api';
 import EmptyState from '../components/EmptyState.vue';
 import StatusBadge from '../components/StatusBadge.vue';
 import Modal from '../components/Modal.vue';
+import LaporanPenjualanPdf from '../components/LaporanPenjualanPdf.vue';
+import LaporanProfitPdf from '../components/LaporanProfitPdf.vue';
+import LaporanStokPdf from '../components/LaporanStokPdf.vue';
+import LaporanServicePdf from '../components/LaporanServicePdf.vue';
 import LaporanHutangPiutangPdf from '../components/LaporanHutangPiutangPdf.vue';
 import { downloadElementAsA4Pdf } from '../lib/pdf';
 import { useStoreSettingsStore } from '../stores/storeSettings';
@@ -18,6 +22,13 @@ const TABS = [
   { value: 'hutang-piutang', label: 'Hutang Piutang' },
 ];
 const NO_DATE_RANGE_TABS = ['stock', 'hutang-piutang'];
+const PDF_META = {
+  sales: { title: 'Laporan Penjualan', component: LaporanPenjualanPdf, filename: 'Laporan-Penjualan' },
+  profit: { title: 'Laporan Profit', component: LaporanProfitPdf, filename: 'Laporan-Profit' },
+  stock: { title: 'Laporan Stok', component: LaporanStokPdf, filename: 'Laporan-Stok' },
+  service: { title: 'Laporan Service', component: LaporanServicePdf, filename: 'Laporan-Service' },
+  'hutang-piutang': { title: 'Laporan Hutang Piutang', component: LaporanHutangPiutangPdf, filename: 'Laporan-Hutang-Piutang' },
+};
 
 const storeSettings = useStoreSettingsStore();
 const tab = ref('sales');
@@ -53,7 +64,7 @@ async function exportCsv() {
   URL.revokeObjectURL(url);
 }
 
-// Modern PDF report — Hutang Piutang only
+// Modern PDF report — one printable design per tab, picked via PDF_META
 const showPdfPreview = ref(false);
 const pdfRef = ref(null);
 const pdfDownloading = ref(false);
@@ -67,7 +78,7 @@ async function downloadPdf() {
   pdfDownloading.value = true;
   try {
     await nextTick();
-    await downloadElementAsA4Pdf(pdfRef.value.$el, `Laporan-Hutang-Piutang-${to.value}.pdf`);
+    await downloadElementAsA4Pdf(pdfRef.value.$el, `${PDF_META[tab.value].filename}-${to.value}.pdf`);
   } finally {
     pdfDownloading.value = false;
   }
@@ -85,7 +96,7 @@ onMounted(load);
         <p class="text-sm text-neutral-500">Analisis penjualan, profit, stok, dan service.</p>
       </div>
       <div class="flex items-center gap-2">
-        <button v-if="tab === 'hutang-piutang'" class="btn-primary" @click="openPdfPreview"><FileText :size="16" /> Generate Laporan PDF</button>
+        <button class="btn-primary" @click="openPdfPreview"><FileText :size="16" /> Generate Laporan PDF</button>
         <button class="btn-secondary" @click="exportCsv"><Download :size="16" /> Export CSV</button>
       </div>
     </div>
@@ -240,9 +251,9 @@ onMounted(load);
       </div>
     </div>
 
-    <Modal v-if="showPdfPreview" title="Laporan Hutang Piutang" size="xl" @close="showPdfPreview = false">
+    <Modal v-if="showPdfPreview" :title="PDF_META[tab].title" size="xl" @close="showPdfPreview = false">
       <div class="space-y-4">
-        <LaporanHutangPiutangPdf ref="pdfRef" :debts="rows" :store="storeSettings.data || {}" />
+        <component :is="PDF_META[tab].component" ref="pdfRef" :rows="rows" :store="storeSettings.data || {}" :from="from" :to="to" />
         <div class="flex justify-end gap-2">
           <button class="btn-secondary" @click="showPdfPreview = false">Tutup</button>
           <button class="btn-primary" :disabled="pdfDownloading" @click="downloadPdf">
