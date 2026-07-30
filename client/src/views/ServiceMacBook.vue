@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Plus, Search, Laptop2, Wrench, UserPlus, Users, Printer, Monitor, PackageCheck, Trash2, Pencil, X } from 'lucide-vue-next';
+import { Plus, Search, Laptop2, Wrench, UserPlus, Users, Printer, Monitor, PackageCheck, Trash2, Pencil, X, ScanLine } from 'lucide-vue-next';
 import api from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import Modal from '../components/Modal.vue';
@@ -8,6 +8,9 @@ import ConfirmDialog from '../components/ConfirmDialog.vue';
 import StatusBadge from '../components/StatusBadge.vue';
 import EmptyState from '../components/EmptyState.vue';
 import ServiceSuccessModal from '../components/ServiceSuccessModal.vue';
+import BarcodeLabelModal from '../components/BarcodeLabelModal.vue';
+import BarcodeMini from '../components/BarcodeMini.vue';
+import ScanBarcodeModal from '../components/ScanBarcodeModal.vue';
 import { formatCurrency, formatDateTime, KONDISI_FISIK_OPTIONS, KELENGKAPAN_OPTIONS } from '../lib/format';
 
 const auth = useAuthStore();
@@ -114,6 +117,16 @@ const detailError = ref('');
 const editDeviceMode = ref(false);
 const deviceForm = ref(emptyDeviceForm());
 const deleting = ref(null);
+const showScan = ref(false);
+const showBarcode = ref(false);
+
+async function lookupService(code) {
+  const { data } = await api.get('/services', { params: { search: code } });
+  const match = data.find((s) => s.ticket_no.toLowerCase() === code.toLowerCase()) || (data.length === 1 ? data[0] : null);
+  if (!match) return false;
+  await openDetail(match);
+  return true;
+}
 
 function emptyDeviceForm() {
   return { device_model: '', model_number: '', serial_number: '', device_color: '', device_storage: '', complaint: '', estimated_cost: 0, checkup_estimate: '', device_password: '' };
@@ -229,7 +242,10 @@ onMounted(loadTickets);
         <h1 class="text-2xl font-bold">Service MacBook</h1>
         <p class="text-sm text-neutral-500">Kelola tiket perbaikan dari penerimaan hingga selesai.</p>
       </div>
-      <button v-if="canCreate" class="btn-primary" @click="openCreate"><Plus :size="16" /> Tiket Baru</button>
+      <div class="flex items-center gap-2">
+        <button class="btn-secondary" @click="showScan = true"><ScanLine :size="16" /> Scan Barcode</button>
+        <button v-if="canCreate" class="btn-primary" @click="openCreate"><Plus :size="16" /> Tiket Baru</button>
+      </div>
     </div>
 
     <div class="card p-4 mb-4 space-y-3">
@@ -257,6 +273,7 @@ onMounted(loadTickets);
           <thead>
             <tr class="text-left text-neutral-400 text-xs uppercase">
               <th class="px-2 py-2 font-medium">Tiket</th>
+              <th class="px-2 py-2 font-medium">Barcode</th>
               <th class="px-2 py-2 font-medium">Pelanggan</th>
               <th class="px-2 py-2 font-medium">Perangkat</th>
               <th class="px-2 py-2 font-medium">Teknisi</th>
@@ -268,6 +285,7 @@ onMounted(loadTickets);
           <tbody>
             <tr v-for="t in tickets" :key="t.id" class="border-t border-neutral-100 dark:border-neutral-800 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50" @click="openDetail(t)">
               <td class="px-2 py-3 font-medium">{{ t.ticket_no }}</td>
+              <td class="px-2 py-3" @click.stop><BarcodeMini :code="t.ticket_no" /></td>
               <td class="px-2 py-3 text-neutral-500">{{ t.customer_name || '-' }}</td>
               <td class="px-2 py-3">
                 <div class="flex items-center gap-2">
@@ -440,6 +458,7 @@ onMounted(loadTickets);
         <!-- Aksi -->
         <div class="flex flex-col sm:flex-row gap-2">
           <router-link :to="`/service-macbook/${detail.id}/nota`" class="btn-secondary text-xs flex-1 justify-center"><Printer :size="14" /> Cetak Nota Penerimaan</router-link>
+          <button class="btn-secondary text-xs flex-1 justify-center" @click="showBarcode = true"><ScanLine :size="14" /> Barcode</button>
           <button v-if="canDelete" class="btn-danger text-xs flex-1 justify-center" @click="deleting = detail"><Trash2 :size="14" /> Hapus Tiket</button>
         </div>
 
@@ -525,5 +544,15 @@ onMounted(loadTickets);
     />
 
     <ServiceSuccessModal v-if="successServiceId" :service-id="successServiceId" @close="closeSuccessModal" />
+
+    <BarcodeLabelModal
+      v-if="showBarcode && detail"
+      :code="detail.ticket_no"
+      :title="detail.device_model"
+      :subtitle="detail.ticket_no"
+      @close="showBarcode = false"
+    />
+
+    <ScanBarcodeModal v-if="showScan" title="Scan Barcode Tiket Service" :lookup="lookupService" @close="showScan = false" />
   </div>
 </template>

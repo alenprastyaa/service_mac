@@ -1,12 +1,15 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Search, Plus, Pencil, Trash2, Box } from 'lucide-vue-next';
+import { Search, Plus, Pencil, Trash2, Box, Eye, ScanLine } from 'lucide-vue-next';
 import api from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import Modal from '../components/Modal.vue';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import EmptyState from '../components/EmptyState.vue';
-import { formatCurrency } from '../lib/format';
+import BarcodeLabelModal from '../components/BarcodeLabelModal.vue';
+import BarcodeMini from '../components/BarcodeMini.vue';
+import ScanBarcodeModal from '../components/ScanBarcodeModal.vue';
+import { formatCurrency, formatDateTime } from '../lib/format';
 
 const auth = useAuthStore();
 const canEdit = computed(() => auth.can('owner', 'admin'));
@@ -23,6 +26,17 @@ const saving = ref(false);
 const formError = ref('');
 
 const deleting = ref(null);
+const viewing = ref(null);
+const barcodeItem = ref(null);
+const showScan = ref(false);
+
+async function lookupProduct(code) {
+  const { data } = await api.get('/products', { params: { search: code } });
+  const match = data.find((p) => p.sku.toLowerCase() === code.toLowerCase()) || (data.length === 1 ? data[0] : null);
+  if (!match) return false;
+  viewing.value = match;
+  return true;
+}
 
 function emptyForm() {
   return { sku: '', name: '', category: 'Sparepart', brand: 'Apple', purchase_price: 0, sell_price: 0, stock_qty: 0, min_stock: 3, unit: 'unit' };
@@ -95,7 +109,10 @@ onMounted(load);
         <h1 class="text-2xl font-bold">Part MacBook</h1>
         <p class="text-sm text-neutral-500">Kelola sparepart & aksesoris MacBook dan pantau ketersediaan stok.</p>
       </div>
-      <button v-if="canEdit" class="btn-primary" @click="openCreate"><Plus :size="16" /> Tambah Part</button>
+      <div class="flex items-center gap-2">
+        <button class="btn-secondary" @click="showScan = true"><ScanLine :size="16" /> Scan Barcode</button>
+        <button v-if="canEdit" class="btn-primary" @click="openCreate"><Plus :size="16" /> Tambah Part</button>
+      </div>
     </div>
 
     <div class="card p-4 mb-4 flex flex-wrap gap-3">
@@ -116,11 +133,12 @@ onMounted(load);
           <thead>
             <tr class="text-left text-neutral-400 text-xs uppercase">
               <th class="px-2 py-2 font-medium">Part</th>
+              <th class="px-2 py-2 font-medium">Barcode</th>
               <th class="px-2 py-2 font-medium">Kategori</th>
               <th class="px-2 py-2 font-medium text-right">Harga Beli</th>
               <th class="px-2 py-2 font-medium text-right">Harga Jual</th>
               <th class="px-2 py-2 font-medium text-right">Stok</th>
-              <th v-if="canEdit" class="px-2 py-2 font-medium text-right">Aksi</th>
+              <th class="px-2 py-2 font-medium text-right">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -136,6 +154,9 @@ onMounted(load);
                   </div>
                 </div>
               </td>
+              <td class="px-2 py-3">
+                <button class="hover:opacity-70" title="Klik untuk cetak label" @click="barcodeItem = p"><BarcodeMini :code="p.sku" /></button>
+              </td>
               <td class="px-2 py-3 text-neutral-500">{{ p.category }}</td>
               <td class="px-2 py-3 text-right text-neutral-500">{{ formatCurrency(p.purchase_price) }}</td>
               <td class="px-2 py-3 text-right font-medium">{{ formatCurrency(p.sell_price) }}</td>
@@ -143,10 +164,13 @@ onMounted(load);
                 <span :class="stockClass(p)">{{ p.stock_qty }}</span>
                 <span class="text-neutral-400"> {{ p.unit }}</span>
               </td>
-              <td v-if="canEdit" class="px-2 py-3">
+              <td class="px-2 py-3">
                 <div class="flex justify-end gap-1">
-                  <button class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500" @click="openEdit(p)"><Pencil :size="15" /></button>
-                  <button class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-950 text-red-500" @click="deleting = p"><Trash2 :size="15" /></button>
+                  <button class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500" title="Detail" @click="viewing = p"><Eye :size="15" /></button>
+                  <template v-if="canEdit">
+                    <button class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500" @click="openEdit(p)"><Pencil :size="15" /></button>
+                    <button class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-950 text-red-500" @click="deleting = p"><Trash2 :size="15" /></button>
+                  </template>
                 </div>
               </td>
             </tr>
@@ -218,5 +242,38 @@ onMounted(load);
       @confirm="confirmDelete"
       @cancel="deleting = null"
     />
+
+    <Modal v-if="viewing" title="Detail Part" @close="viewing = null">
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h4 class="font-semibold text-lg">{{ viewing.name }}</h4>
+          <button class="btn-secondary text-xs" @click="barcodeItem = viewing"><ScanLine :size="14" /> Barcode</button>
+        </div>
+        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-y-3 text-sm">
+          <div><dt class="text-xs text-neutral-400">SKU</dt><dd class="font-mono">{{ viewing.sku }}</dd></div>
+          <div><dt class="text-xs text-neutral-400">Kategori</dt><dd>{{ viewing.category }}</dd></div>
+          <div><dt class="text-xs text-neutral-400">Brand</dt><dd>{{ viewing.brand }}</dd></div>
+          <div><dt class="text-xs text-neutral-400">Satuan</dt><dd>{{ viewing.unit }}</dd></div>
+          <div><dt class="text-xs text-neutral-400">Harga Beli</dt><dd>{{ formatCurrency(viewing.purchase_price) }}</dd></div>
+          <div><dt class="text-xs text-neutral-400">Harga Jual</dt><dd class="font-semibold text-brand-600 dark:text-brand-400">{{ formatCurrency(viewing.sell_price) }}</dd></div>
+          <div><dt class="text-xs text-neutral-400">Stok</dt><dd :class="stockClass(viewing)">{{ viewing.stock_qty }} {{ viewing.unit }}</dd></div>
+          <div><dt class="text-xs text-neutral-400">Stok Minimum</dt><dd>{{ viewing.min_stock }} {{ viewing.unit }}</dd></div>
+          <div class="sm:col-span-2"><dt class="text-xs text-neutral-400">Ditambahkan</dt><dd>{{ formatDateTime(viewing.created_at) }}</dd></div>
+        </dl>
+        <div class="flex justify-end pt-2">
+          <button class="btn-secondary" @click="viewing = null">Tutup</button>
+        </div>
+      </div>
+    </Modal>
+
+    <BarcodeLabelModal
+      v-if="barcodeItem"
+      :code="barcodeItem.sku"
+      :title="barcodeItem.name"
+      :subtitle="barcodeItem.sku"
+      @close="barcodeItem = null"
+    />
+
+    <ScanBarcodeModal v-if="showScan" title="Scan Barcode Part" :lookup="lookupProduct" @close="showScan = false" />
   </div>
 </template>

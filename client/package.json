@@ -12,6 +12,8 @@
     "axios": "^1.7.9",
     "chart.js": "^4.4.7",
     "html2canvas": "^1.4.1",
+    "html5-qrcode": "^2.3.8",
+    "jsbarcode": "^3.12.3",
     "jspdf": "^4.2.1",
     "lucide-vue-next": "^0.469.0",
     "pinia": "^2.3.0",

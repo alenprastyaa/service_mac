@@ -6,7 +6,11 @@ import { useAuthStore } from '../stores/auth';
 import Modal from '../components/Modal.vue';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import EmptyState from '../components/EmptyState.vue';
+import BarcodeLabelModal from '../components/BarcodeLabelModal.vue';
+import BarcodeMini from '../components/BarcodeMini.vue';
+import ScanBarcodeModal from '../components/ScanBarcodeModal.vue';
 import { formatCurrency, formatDateTime } from '../lib/format';
+import { macbookBarcodeValue, parseMacbookUnitCode } from '../lib/barcode';
 
 const auth = useAuthStore();
 const canEdit = computed(() => auth.can('owner', 'admin'));
@@ -26,6 +30,29 @@ const formError = ref('');
 
 const deleting = ref(null);
 const viewing = ref(null);
+const barcodeItem = ref(null);
+const showScan = ref(false);
+
+async function lookupMacbook(code) {
+  // 1) Try matching the unit's own serial number (typed in when the unit was added).
+  const { data: results } = await api.get('/macbooks', { params: { search: code } });
+  const bySerial = results.find((m) => m.serial_number && m.serial_number.toLowerCase() === code.toLowerCase());
+  if (bySerial) {
+    viewing.value = bySerial;
+    return true;
+  }
+
+  // 2) Fall back to our own auto-generated MB###### code.
+  const id = parseMacbookUnitCode(code);
+  if (!id) return false;
+  try {
+    const { data } = await api.get(`/macbooks/${id}`);
+    viewing.value = data;
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
 
 function emptyForm() {
   return {
@@ -128,7 +155,10 @@ onMounted(load);
         <h1 class="text-2xl font-bold">Stock MacBook</h1>
         <p class="text-sm text-neutral-500">Kelola unit MacBook dan pantau ketersediaan stok.</p>
       </div>
-      <button v-if="canEdit" class="btn-primary" @click="openCreate"><Plus :size="16" /> Tambah Unit</button>
+      <div class="flex items-center gap-2">
+        <button class="btn-secondary" @click="showScan = true"><ScanLine :size="16" /> Scan Barcode</button>
+        <button v-if="canEdit" class="btn-primary" @click="openCreate"><Plus :size="16" /> Tambah Unit</button>
+      </div>
     </div>
 
     <div class="card p-4 mb-5 flex flex-wrap gap-3">
@@ -177,6 +207,10 @@ onMounted(load);
           <p class="text-xs text-neutral-400 font-mono flex items-center gap-1">
             <ScanLine :size="13" /> {{ m.serial_number || '-' }}
           </p>
+
+          <button class="self-start hover:opacity-70" title="Klik untuk cetak label" @click="barcodeItem = m">
+            <BarcodeMini :code="macbookBarcodeValue(m)" />
+          </button>
 
           <div class="mt-auto pt-3 border-t border-neutral-100 dark:border-neutral-800 space-y-1">
             <div class="flex justify-between text-xs">
@@ -304,6 +338,7 @@ onMounted(load);
           <span class="badge font-semibold" :class="STATUS_META[viewing.status]?.class">{{ STATUS_META[viewing.status]?.label }}</span>
         </div>
         <dl class="grid grid-cols-1 sm:grid-cols-2 gap-y-3 text-sm">
+          <div><dt class="text-xs text-neutral-400">Kode Unit</dt><dd class="font-mono">{{ macbookBarcodeValue(viewing) }}</dd></div>
           <div><dt class="text-xs text-neutral-400">Spesifikasi</dt><dd>{{ specLine(viewing) }}</dd></div>
           <div><dt class="text-xs text-neutral-400">Warna</dt><dd>{{ viewing.color || '-' }}</dd></div>
           <div><dt class="text-xs text-neutral-400">Baterai</dt><dd>{{ viewing.battery_pct }}%</dd></div>
@@ -314,7 +349,8 @@ onMounted(load);
           <div class="sm:col-span-2" v-if="viewing.notes"><dt class="text-xs text-neutral-400">Catatan</dt><dd>{{ viewing.notes }}</dd></div>
           <div class="sm:col-span-2"><dt class="text-xs text-neutral-400">Ditambahkan</dt><dd>{{ formatDateTime(viewing.created_at) }}</dd></div>
         </dl>
-        <div class="flex justify-end pt-2">
+        <div class="flex justify-end gap-2 pt-2">
+          <button class="btn-secondary" @click="barcodeItem = viewing"><ScanLine :size="14" /> Barcode</button>
           <button class="btn-secondary" @click="viewing = null">Tutup</button>
         </div>
       </div>
@@ -327,5 +363,15 @@ onMounted(load);
       @confirm="confirmDelete"
       @cancel="deleting = null"
     />
+
+    <BarcodeLabelModal
+      v-if="barcodeItem"
+      :code="macbookBarcodeValue(barcodeItem)"
+      :title="barcodeItem.model_name"
+      :subtitle="macbookBarcodeValue(barcodeItem)"
+      @close="barcodeItem = null"
+    />
+
+    <ScanBarcodeModal v-if="showScan" title="Scan Barcode Unit MacBook" :lookup="lookupMacbook" @close="showScan = false" />
   </div>
 </template>
