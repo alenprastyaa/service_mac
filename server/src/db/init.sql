@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS store_settings (
   bank_name VARCHAR(50),
   bank_account_number VARCHAR(50),
   bank_account_holder VARCHAR(100),
+  default_min_stock INT NOT NULL DEFAULT 3,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 

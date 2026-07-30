@@ -174,6 +174,28 @@ async function saveBank() {
   }
 }
 
+// Default min stock — used to prefill "Stok Minimum" when adding a new Part, so
+// staff don't have to type it every time. Each part can still override its own value.
+const minStockSaving = ref(false);
+const minStockSuccess = ref('');
+const minStockError = ref('');
+
+async function saveDefaultMinStock() {
+  minStockSaving.value = true;
+  minStockSuccess.value = '';
+  minStockError.value = '';
+  try {
+    const { data } = await api.put('/settings/default-min-stock', { default_min_stock: storeForm.value.default_min_stock });
+    storeForm.value = { ...storeForm.value, ...data };
+    storeSettings.refresh();
+    minStockSuccess.value = 'Stok minimum default berhasil disimpan.';
+  } catch (err) {
+    minStockError.value = err.response?.data?.error || 'Gagal menyimpan stok minimum default';
+  } finally {
+    minStockSaving.value = false;
+  }
+}
+
 // Checklist templates — fully user-managed, drives the dynamic checklist on the intake form & nota.
 const checklist = ref({ kondisi_fisik: [], kelengkapan: [] });
 const newItemLabel = ref({ kondisi_fisik: '', kelengkapan: '' });
@@ -350,6 +372,18 @@ onMounted(() => {
       <p v-if="bankError" class="text-sm text-red-500 mt-3">{{ bankError }}</p>
       <p v-if="bankSuccess" class="text-sm text-emerald-600 mt-3">{{ bankSuccess }}</p>
       <button class="btn-primary mt-4" :disabled="bankSaving" @click="saveBank">Simpan Rekening</button>
+    </div>
+
+    <div v-if="isOwnerOrAdmin && storeForm" class="card p-5 mb-4">
+      <h3 class="font-semibold mb-1 flex items-center gap-2"><PackageCheck :size="17" class="text-brand-500" /> Stok Minimum Default</h3>
+      <p class="text-xs text-neutral-500 mb-4">Dipakai sebagai isian awal "Stok Minimum" saat menambah Part baru — tiap part tetap bisa diubah sendiri nilainya.</p>
+      <div class="max-w-xs">
+        <label class="label">Stok Minimum Default</label>
+        <input v-model.number="storeForm.default_min_stock" type="number" min="0" class="input" />
+      </div>
+      <p v-if="minStockError" class="text-sm text-red-500 mt-3">{{ minStockError }}</p>
+      <p v-if="minStockSuccess" class="text-sm text-emerald-600 mt-3">{{ minStockSuccess }}</p>
+      <button class="btn-primary mt-4" :disabled="minStockSaving" @click="saveDefaultMinStock">Simpan</button>
     </div>
 
     <div v-if="isOwnerOrAdmin" class="card p-5 mb-4">

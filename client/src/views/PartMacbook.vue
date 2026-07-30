@@ -10,10 +10,12 @@ import EmptyState from '../components/EmptyState.vue';
 import BarcodeLabelModal from '../components/BarcodeLabelModal.vue';
 import BarcodeMini from '../components/BarcodeMini.vue';
 import ScanBarcodeModal from '../components/ScanBarcodeModal.vue';
+import { useStoreSettingsStore } from '../stores/storeSettings';
 import { formatCurrency, formatDateTime } from '../lib/format';
 
 const auth = useAuthStore();
 const route = useRoute();
+const storeSettings = useStoreSettingsStore();
 const canEdit = computed(() => auth.can('owner', 'admin'));
 
 const products = ref([]);
@@ -42,7 +44,10 @@ async function lookupProduct(code) {
 }
 
 function emptyForm() {
-  return { sku: '', name: '', category: 'Sparepart', brand: 'Apple', purchase_price: 0, sell_price: 0, stock_qty: 0, min_stock: 3, unit: 'unit' };
+  return {
+    sku: '', name: '', category: 'Sparepart', brand: 'Apple', purchase_price: 0, sell_price: 0, stock_qty: 0,
+    min_stock: storeSettings.data?.default_min_stock ?? 3, unit: 'unit',
+  };
 }
 
 const categories = computed(() => [...new Set(products.value.map((p) => p.category))]);
@@ -104,7 +109,10 @@ function stockClass(p) {
   return 'text-emerald-600 font-semibold';
 }
 
-onMounted(load);
+onMounted(() => {
+  load();
+  storeSettings.fetch();
+});
 </script>
 
 <template>

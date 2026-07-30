@@ -64,4 +64,17 @@ async function updateBank(req, res) {
   res.json(rows[0]);
 }
 
-module.exports = { getStore, updateStore, updateTarget, updateBank };
+async function updateDefaultMinStock(req, res) {
+  const value = Number(req.body.default_min_stock);
+  if (!Number.isFinite(value) || value < 0) return res.status(400).json({ error: 'Nilai stok minimum default tidak valid' });
+
+  await pool.query(
+    `INSERT INTO store_settings (id, default_min_stock) VALUES (1, ?)
+     ON DUPLICATE KEY UPDATE default_min_stock = VALUES(default_min_stock)`,
+    [value]
+  );
+  const [rows] = await pool.query('SELECT * FROM store_settings WHERE id = 1');
+  res.json(rows[0]);
+}
+
+module.exports = { getStore, updateStore, updateTarget, updateBank, updateDefaultMinStock };

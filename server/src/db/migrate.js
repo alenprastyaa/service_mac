@@ -29,6 +29,7 @@ const COLUMNS = [
   'ALTER TABLE suppliers ADD COLUMN bank_account_number VARCHAR(50)',
   'ALTER TABLE suppliers ADD COLUMN bank_account_holder VARCHAR(100)',
   'ALTER TABLE users ADD COLUMN avatar_url VARCHAR(255) DEFAULT NULL',
+  'ALTER TABLE store_settings ADD COLUMN default_min_stock INT NOT NULL DEFAULT 3',
 ];
 
 // Creates the database and all tables if they don't exist yet. Safe to run on every
