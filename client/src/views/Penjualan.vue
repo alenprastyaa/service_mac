@@ -49,7 +49,7 @@ function onSearchInput() {
 
 const filteredProducts = computed(() => {
   const q = productSearch.value.toLowerCase();
-  return products.value.filter((p) => p.stock_qty > 0 && (!q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q))).slice(0, 8);
+  return products.value.filter((p) => p.stock_qty > 0 && (!q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)));
 });
 
 function addToCart(p) {
