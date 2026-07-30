@@ -4,11 +4,13 @@ import { Moon, Sun, Plus, Pencil, KeyRound, Store, ClipboardList, Trash2, Chevro
 import api from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { useUiStore } from '../stores/ui';
+import { useStoreSettingsStore } from '../stores/storeSettings';
 import Modal from '../components/Modal.vue';
 import { ROLE_LABELS, formatDate } from '../lib/format';
 
 const auth = useAuthStore();
 const ui = useUiStore();
+const storeSettings = useStoreSettingsStore();
 const isOwner = computed(() => auth.role === 'owner');
 const isOwnerOrAdmin = computed(() => auth.can('owner', 'admin'));
 
@@ -112,6 +114,7 @@ async function saveStore() {
   try {
     const { data } = await api.put('/settings/store', storeForm.value);
     storeForm.value = data;
+    storeSettings.refresh();
     storeSuccess.value = 'Profil toko berhasil disimpan.';
   } catch (err) {
     storeError.value = err.response?.data?.error || 'Gagal menyimpan profil toko';

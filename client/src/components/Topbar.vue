@@ -5,11 +5,13 @@ import { Search, Bell, Moon, Sun, LogOut, UserCog, ShoppingCart, Wrench, Menu } 
 import { useUiStore } from '../stores/ui';
 import { useAuthStore } from '../stores/auth';
 import { useNotificationsStore } from '../stores/notifications';
+import { useStoreSettingsStore } from '../stores/storeSettings';
 import { formatTimeAgo } from '../lib/format';
 
 const ui = useUiStore();
 const auth = useAuthStore();
 const notifications = useNotificationsStore();
+const storeSettings = useStoreSettingsStore();
 const router = useRouter();
 
 const menuOpen = ref(false);
@@ -24,6 +26,7 @@ function onClickOutside(e) {
 onMounted(() => {
   document.addEventListener('click', onClickOutside);
   notifications.startPolling();
+  storeSettings.fetch();
 });
 onBeforeUnmount(() => {
   document.removeEventListener('click', onClickOutside);
@@ -127,6 +130,10 @@ function logout() {
           </button>
         </div>
       </div>
+
+      <p v-if="storeSettings.data?.address" class="hidden md:block text-xs text-neutral-500 max-w-[220px] truncate" :title="storeSettings.data.address">
+        {{ storeSettings.data.address }}
+      </p>
     </div>
   </header>
 </template>
