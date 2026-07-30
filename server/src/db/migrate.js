@@ -23,6 +23,11 @@ const COLUMNS = [
   'ALTER TABLE store_settings ADD COLUMN bank_name VARCHAR(50)',
   'ALTER TABLE store_settings ADD COLUMN bank_account_number VARCHAR(50)',
   'ALTER TABLE store_settings ADD COLUMN bank_account_holder VARCHAR(100)',
+  'ALTER TABLE suppliers ADD COLUMN code VARCHAR(20)',
+  'ALTER TABLE suppliers ADD COLUMN city VARCHAR(100)',
+  'ALTER TABLE suppliers ADD COLUMN bank_name VARCHAR(50)',
+  'ALTER TABLE suppliers ADD COLUMN bank_account_number VARCHAR(50)',
+  'ALTER TABLE suppliers ADD COLUMN bank_account_holder VARCHAR(100)',
 ];
 
 // Creates the database and all tables if they don't exist yet. Safe to run on every
@@ -56,9 +61,19 @@ async function ensureSchema() {
       }
     }
 
+    await ensureSupplierCodes(conn);
     await ensureDefaultOwner(conn);
   } finally {
     await conn.end();
+  }
+}
+
+// Backfills the Kode Supplier (SUP-0001, derived from id) for suppliers that
+// existed before this column was introduced. New suppliers get theirs at creation.
+async function ensureSupplierCodes(conn) {
+  const [rows] = await conn.query('SELECT id FROM suppliers WHERE code IS NULL');
+  for (const row of rows) {
+    await conn.query('UPDATE suppliers SET code = ? WHERE id = ?', [`SUP-${String(row.id).padStart(4, '0')}`, row.id]);
   }
 }
 

@@ -41,12 +41,31 @@ CREATE TABLE IF NOT EXISTS customers (
 
 CREATE TABLE IF NOT EXISTS suppliers (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  code VARCHAR(20),
   name VARCHAR(150) NOT NULL,
   contact_person VARCHAR(150),
   phone VARCHAR(30),
   email VARCHAR(150),
   address VARCHAR(255),
+  city VARCHAR(100),
+  bank_name VARCHAR(50),
+  bank_account_number VARCHAR(50),
+  bank_account_holder VARCHAR(100),
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS supplier_debts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  supplier_id INT NOT NULL,
+  amount DECIMAL(14,2) NOT NULL,
+  description VARCHAR(255),
+  due_date DATE DEFAULT NULL,
+  status ENUM('belum_lunas', 'lunas') NOT NULL DEFAULT 'belum_lunas',
+  paid_at DATETIME DEFAULT NULL,
+  created_by INT DEFAULT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS products (

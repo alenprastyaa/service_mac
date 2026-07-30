@@ -10,4 +10,8 @@ router.post('/', requireRole('owner', 'admin'), asyncHandler(ctrl.create));
 router.put('/:id', requireRole('owner', 'admin'), asyncHandler(ctrl.update));
 router.delete('/:id', requireRole('owner', 'admin'), asyncHandler(ctrl.remove));
 
+router.post('/:id/debts', requireRole('owner', 'admin'), asyncHandler(ctrl.addDebt));
+router.put('/:id/debts/:debtId/pay', requireRole('owner', 'admin'), asyncHandler(ctrl.payDebt));
+router.delete('/:id/debts/:debtId', requireRole('owner', 'admin'), asyncHandler(ctrl.removeDebt));
+
 module.exports = router;
