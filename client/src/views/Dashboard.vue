@@ -87,7 +87,7 @@ const serviceRows = computed(() => {
         <p class="text-lg font-medium mt-3">{{ greeting }}, {{ auth.user?.name?.split(' ')[0] }} 👋</p>
         <p class="text-sm text-neutral-500">Berikut ringkasan aktivitas toko Anda hari ini.</p>
       </div>
-      <div class="flex items-center gap-2 card px-4 py-2 text-sm">
+      <div class="flex items-center gap-2 card-glossy px-4 py-2 text-sm">
         <CalendarDays :size="16" class="text-neutral-400" />
         {{ formatDate(new Date()) }}
       </div>
@@ -100,7 +100,7 @@ const serviceRows = computed(() => {
         :change="`${summary.omzet_today_change_pct >= 0 ? '↑' : '↓'} ${Math.abs(summary.omzet_today_change_pct)}% dari kemarin`"
         :change-direction="summary.omzet_today_change_pct >= 0 ? 'up' : 'down'"
         :icon="Wallet"
-        icon-bg="bg-brand-500"
+        icon-bg="bg-gradient-to-br from-brand-400 to-brand-600"
       />
       <StatCard
         title="Omzet Bulan Ini"
@@ -108,7 +108,7 @@ const serviceRows = computed(() => {
         :change="`${summary.omzet_month_change_pct >= 0 ? '↑' : '↓'} ${Math.abs(summary.omzet_month_change_pct)}% dari bulan lalu`"
         :change-direction="summary.omzet_month_change_pct >= 0 ? 'up' : 'down'"
         :icon="CalendarRange"
-        icon-bg="bg-orange-500"
+        icon-bg="bg-gradient-to-br from-orange-400 to-orange-600"
       />
       <StatCard
         title="Laba Kotor (Bulan Ini)"
@@ -116,7 +116,7 @@ const serviceRows = computed(() => {
         :change="`${summary.gross_profit_month_change_pct >= 0 ? '↑' : '↓'} ${Math.abs(summary.gross_profit_month_change_pct)}% dari bulan lalu`"
         :change-direction="summary.gross_profit_month_change_pct >= 0 ? 'up' : 'down'"
         :icon="TrendingUp"
-        icon-bg="bg-emerald-500"
+        icon-bg="bg-gradient-to-br from-emerald-400 to-emerald-600"
       />
       <StatCard
         title="Total Stok MacBook"
@@ -124,7 +124,7 @@ const serviceRows = computed(() => {
         change="Unit siap jual (ready)"
         change-direction="neutral"
         :icon="Laptop"
-        icon-bg="bg-blue-500"
+        icon-bg="bg-gradient-to-br from-blue-400 to-blue-600"
       />
       <StatCard
         title="Total Stok Sparepart"
@@ -132,7 +132,7 @@ const serviceRows = computed(() => {
         :change="`${summary.low_stock_count} part stok menipis`"
         change-direction="neutral"
         :icon="PackageSearch"
-        icon-bg="bg-purple-500"
+        icon-bg="bg-gradient-to-br from-purple-400 to-purple-600"
       />
       <StatCard
         title="Service Masuk"
@@ -140,7 +140,7 @@ const serviceRows = computed(() => {
         change="Ticket masuk hari ini"
         change-direction="neutral"
         :icon="Inbox"
-        icon-bg="bg-cyan-500"
+        icon-bg="bg-gradient-to-br from-cyan-400 to-cyan-600"
       />
       <StatCard
         title="Service Selesai"
@@ -148,7 +148,7 @@ const serviceRows = computed(() => {
         change="Ticket selesai hari ini"
         change-direction="neutral"
         :icon="CheckCircle2"
-        icon-bg="bg-lime-600"
+        icon-bg="bg-gradient-to-br from-lime-500 to-lime-700"
       />
     </div>
 
@@ -159,14 +159,19 @@ const serviceRows = computed(() => {
           <Pencil :size="13" /> Atur Target
         </button>
       </div>
-      <div class="card p-5">
+      <div class="card-glossy p-5">
         <template v-if="summary.monthly_omzet_target > 0">
           <div class="flex items-center justify-between mb-3">
             <p class="text-sm font-medium">Progress Omzet</p>
             <p class="text-lg font-bold text-orange-500">{{ targetProgressPct }}%</p>
           </div>
-          <div class="h-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
-            <div class="h-full rounded-full bg-orange-500 transition-all" :style="{ width: `${targetProgressPct}%` }"></div>
+          <div class="h-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden shadow-inner">
+            <div
+              class="relative h-full rounded-full bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 shadow-[0_0_8px_rgba(249,115,22,0.5)] transition-all overflow-hidden"
+              :style="{ width: `${targetProgressPct}%` }"
+            >
+              <div class="absolute inset-0 bg-gradient-to-b from-white/40 to-transparent"></div>
+            </div>
           </div>
           <p class="text-sm text-neutral-500 mt-3">
             {{ formatCurrency(summary.omzet_month) }} dari Target {{ formatCurrency(summary.monthly_omzet_target) }}
@@ -177,7 +182,7 @@ const serviceRows = computed(() => {
     </div>
 
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
-      <div class="card p-5">
+      <div class="card-glossy p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="font-semibold">Status Service</h3>
           <router-link to="/service-macbook" class="text-xs font-medium text-brand-500 hover:underline">Lihat Semua</router-link>
@@ -195,7 +200,7 @@ const serviceRows = computed(() => {
         </div>
       </div>
 
-      <div class="card p-5 xl:col-span-2">
+      <div class="card-glossy p-5 xl:col-span-2">
         <div class="flex items-center justify-between mb-4">
           <h3 class="font-semibold">Transaksi Terbaru</h3>
           <router-link to="/penjualan" class="text-xs font-medium text-brand-500 hover:underline">Lihat Semua</router-link>
@@ -226,7 +231,7 @@ const serviceRows = computed(() => {
       </div>
     </div>
 
-    <div class="card p-5">
+    <div class="card-glossy p-5">
       <div class="flex items-center justify-between mb-4">
         <h3 class="font-semibold">Stok Sparepart Menipis</h3>
         <router-link to="/part-macbook" class="text-xs font-medium text-brand-500 hover:underline">Lihat Semua</router-link>
