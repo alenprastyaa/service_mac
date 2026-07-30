@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Moon, Sun, Plus, Pencil, KeyRound, Store, ClipboardList, Trash2, ChevronUp, ChevronDown, Monitor, PackageCheck, Landmark } from 'lucide-vue-next';
+import { Moon, Sun, Plus, Pencil, KeyRound, Store, ClipboardList, Trash2, ChevronUp, ChevronDown, Monitor, PackageCheck, Landmark, Camera } from 'lucide-vue-next';
 import api from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { useUiStore } from '../stores/ui';
@@ -63,6 +63,33 @@ async function submitUser() {
     userError.value = err.response?.data?.error || 'Gagal menyimpan pengguna';
   } finally {
     savingUser.value = false;
+  }
+}
+
+// Change own profile photo
+const photoInput = ref(null);
+const photoUploading = ref(false);
+const photoError = ref('');
+
+function triggerPhotoInput() {
+  photoInput.value?.click();
+}
+
+async function onPhotoChange(e) {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  photoUploading.value = true;
+  photoError.value = '';
+  try {
+    const fd = new FormData();
+    fd.append('photo', file);
+    const { data } = await api.put('/auth/photo', fd);
+    auth.updateUser(data);
+  } catch (err) {
+    photoError.value = err.response?.data?.error || 'Gagal mengunggah foto';
+  } finally {
+    photoUploading.value = false;
   }
 }
 
@@ -217,14 +244,25 @@ onMounted(() => {
     <div class="card p-5 mb-4">
       <h3 class="font-semibold mb-4">Profil Saya</h3>
       <div class="flex items-center gap-4 mb-5">
-        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-brand-400 to-brand-700 flex items-center justify-center text-lg font-semibold text-white">
-          {{ auth.initials }}
-        </div>
+        <button type="button" class="relative w-14 h-14 rounded-full shrink-0 group" title="Ganti foto profil" @click="triggerPhotoInput">
+          <img v-if="auth.user?.avatar_url" :src="auth.user.avatar_url" class="w-14 h-14 rounded-full object-cover" />
+          <div v-else class="w-14 h-14 rounded-full bg-gradient-to-br from-brand-400 to-brand-700 flex items-center justify-center text-lg font-semibold text-white">
+            {{ auth.initials }}
+          </div>
+          <span class="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity">
+            <Camera :size="16" />
+          </span>
+        </button>
+        <input ref="photoInput" type="file" accept="image/*" class="hidden" @change="onPhotoChange" />
         <div>
           <p class="font-medium">{{ auth.user?.name }}</p>
           <p class="text-sm text-neutral-500">{{ auth.user?.email }} · {{ ROLE_LABELS[auth.role] }}</p>
+          <button type="button" class="text-xs font-medium text-brand-500 hover:underline mt-1" :disabled="photoUploading" @click="triggerPhotoInput">
+            {{ photoUploading ? 'Mengunggah...' : 'Ganti Foto Profil' }}
+          </button>
         </div>
       </div>
+      <p v-if="photoError" class="text-sm text-red-500 mb-3">{{ photoError }}</p>
 
       <h4 class="text-sm font-medium mb-3">Ubah Password</h4>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md">

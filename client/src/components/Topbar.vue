@@ -114,8 +114,9 @@ function logout() {
       </button>
 
       <div class="relative" ref="menuRef">
-        <button @click="menuOpen = !menuOpen" class="w-10 h-10 rounded-full bg-gradient-to-br from-brand-400 to-brand-700 flex items-center justify-center text-xs font-semibold text-white">
-          {{ auth.initials }}
+        <button @click="menuOpen = !menuOpen" class="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-brand-400 to-brand-700 flex items-center justify-center text-xs font-semibold text-white">
+          <img v-if="auth.user?.avatar_url" :src="auth.user.avatar_url" class="w-full h-full object-cover" />
+          <span v-else>{{ auth.initials }}</span>
         </button>
         <div v-if="menuOpen" class="absolute right-0 mt-2 w-52 card p-2 text-sm">
           <div class="px-3 py-2 border-b border-neutral-100 dark:border-neutral-800 mb-1">

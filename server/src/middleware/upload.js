@@ -11,4 +11,10 @@ const uploadMacbookPhoto = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 }).single('photo');
 
-module.exports = { uploadMacbookPhoto };
+const uploadUserPhoto = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: imageFilter,
+  limits: { fileSize: 5 * 1024 * 1024 },
+}).single('photo');
+
+module.exports = { uploadMacbookPhoto, uploadUserPhoto };

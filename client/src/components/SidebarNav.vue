@@ -56,7 +56,8 @@ const isActive = (to) => route.path === to;
 
     <router-link to="/pengaturan" class="px-4 py-4 border-t border-neutral-200 dark:border-neutral-800 flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
       <div class="icon-glossy w-9 h-9 rounded-full bg-gradient-to-br from-brand-400 to-brand-700 text-xs font-semibold shrink-0">
-        <span class="relative">{{ auth.initials }}</span>
+        <img v-if="auth.user?.avatar_url" :src="auth.user.avatar_url" class="absolute inset-0 w-full h-full object-cover" />
+        <span v-else class="relative">{{ auth.initials }}</span>
       </div>
       <div class="min-w-0 flex-1">
         <p class="text-sm font-medium text-ink-900 dark:text-white truncate">{{ auth.user?.name }}</p>

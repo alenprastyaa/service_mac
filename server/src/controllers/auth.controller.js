@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/db');
+const { uploadImage } = require('../lib/uploadService');
 
 function signToken(user) {
   return jwt.sign({ id: user.id, name: user.name, email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: '12h' });
@@ -23,7 +24,7 @@ async function login(req, res) {
 }
 
 async function me(req, res) {
-  const [rows] = await pool.query('SELECT id, name, email, role, created_at FROM users WHERE id = ?', [req.user.id]);
+  const [rows] = await pool.query('SELECT id, name, email, role, avatar_url, created_at FROM users WHERE id = ?', [req.user.id]);
   if (!rows[0]) return res.status(404).json({ error: 'User tidak ditemukan' });
   res.json(rows[0]);
 }
@@ -36,4 +37,12 @@ async function changePassword(req, res) {
   res.json({ ok: true });
 }
 
-module.exports = { login, me, changePassword };
+async function updatePhoto(req, res) {
+  if (!req.file) return res.status(400).json({ error: 'File foto wajib diunggah' });
+  const avatar_url = await uploadImage(req.file.buffer, req.file.originalname, req.file.mimetype);
+  await pool.query('UPDATE users SET avatar_url = ? WHERE id = ?', [avatar_url, req.user.id]);
+  const [rows] = await pool.query('SELECT id, name, email, role, avatar_url, created_at FROM users WHERE id = ?', [req.user.id]);
+  res.json(rows[0]);
+}
+
+module.exports = { login, me, changePassword, updatePhoto };

@@ -25,6 +25,10 @@ export const useAuthStore = defineStore('auth', {
       localStorage.removeItem('oren_token');
       localStorage.removeItem('oren_user');
     },
+    updateUser(partial) {
+      this.user = { ...this.user, ...partial };
+      localStorage.setItem('oren_user', JSON.stringify(this.user));
+    },
     can(...roles) {
       return this.user && roles.includes(this.user.role);
     },
