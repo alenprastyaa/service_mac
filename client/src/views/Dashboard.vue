@@ -49,14 +49,6 @@ async function saveTarget() {
   }
 }
 
-const greeting = computed(() => {
-  const h = new Date().getHours();
-  if (h < 11) return 'Good morning';
-  if (h < 15) return 'Good afternoon';
-  if (h < 18) return 'Good evening';
-  return 'Good night';
-});
-
 async function loadSummary() {
   const { data } = await api.get('/dashboard/summary');
   summary.value = data;
@@ -84,8 +76,7 @@ const serviceRows = computed(() => {
     <div class="flex flex-wrap items-start justify-between gap-4 mb-6">
       <div>
         <h1 class="text-2xl font-bold">Dashboard</h1>
-        <p class="text-lg font-medium mt-3">{{ greeting }}, {{ auth.user?.name?.split(' ')[0] }} 👋</p>
-        <p class="text-sm text-neutral-500">Berikut ringkasan aktivitas toko Anda hari ini.</p>
+        <p class="text-sm text-neutral-500 mt-1">Berikut ringkasan aktivitas toko Anda hari ini.</p>
       </div>
       <div class="flex items-center gap-2 card-glossy px-4 py-2 text-sm">
         <CalendarDays :size="16" class="text-neutral-400" />
