@@ -1,5 +1,7 @@
 const pool = require('../config/db');
 const { uploadImage } = require('../lib/uploadService');
+const { nextInvoiceNo } = require('./sales.controller');
+const { notify } = require('../lib/notify');
 
 function serialize(row) {
   return { ...row, photo_url: row.photo_path || null };
@@ -65,26 +67,65 @@ async function update(req, res) {
   const { model_name, chip, ram, storage, color, battery_pct, cycle_count, serial_number, modal_price, jual_price, status, notes } = req.body;
 
   const photo_path = req.file ? await uploadImage(req.file.buffer, req.file.originalname, req.file.mimetype) : current.photo_path;
+  const nextStatus = status ?? current.status;
+  const nextJualPrice = jual_price ?? current.jual_price;
 
-  await pool.query(
-    `UPDATE macbooks SET photo_path = ?, model_name = ?, chip = ?, ram = ?, storage = ?, color = ?, battery_pct = ?, cycle_count = ?, serial_number = ?, modal_price = ?, jual_price = ?, status = ?, notes = ? WHERE id = ?`,
-    [
-      photo_path,
-      model_name ?? current.model_name,
-      chip ?? current.chip,
-      ram ?? current.ram,
-      storage ?? current.storage,
-      color ?? current.color,
-      battery_pct ?? current.battery_pct,
-      cycle_count ?? current.cycle_count,
-      serial_number ?? current.serial_number,
-      modal_price ?? current.modal_price,
-      jual_price ?? current.jual_price,
-      status ?? current.status,
-      notes ?? current.notes,
-      req.params.id,
-    ]
-  );
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    await conn.query(
+      `UPDATE macbooks SET photo_path = ?, model_name = ?, chip = ?, ram = ?, storage = ?, color = ?, battery_pct = ?, cycle_count = ?, serial_number = ?, modal_price = ?, jual_price = ?, status = ?, notes = ? WHERE id = ?`,
+      [
+        photo_path,
+        model_name ?? current.model_name,
+        chip ?? current.chip,
+        ram ?? current.ram,
+        storage ?? current.storage,
+        color ?? current.color,
+        battery_pct ?? current.battery_pct,
+        cycle_count ?? current.cycle_count,
+        serial_number ?? current.serial_number,
+        modal_price ?? current.modal_price,
+        nextJualPrice,
+        nextStatus,
+        notes ?? current.notes,
+        req.params.id,
+      ]
+    );
+
+    // Status flipped to "Terjual" by hand (outside the POS flow) — record it as a
+    // real sale too, so it still counts toward Laporan Profit / Laba Kotor.
+    if (current.status !== 'terjual' && nextStatus === 'terjual') {
+      const invoiceNo = await nextInvoiceNo(conn);
+      const [saleResult] = await conn.query(
+        'INSERT INTO sales (invoice_no, customer_id, subtotal, discount, tax, total, payment_method, status, created_by) VALUES (?, NULL, ?, 0, 0, ?, "tunai", "lunas", ?)',
+        [invoiceNo, nextJualPrice, nextJualPrice, req.user.id]
+      );
+      await conn.query('INSERT INTO sale_items (sale_id, macbook_id, qty, price, subtotal) VALUES (?, ?, 1, ?, ?)', [saleResult.insertId, req.params.id, nextJualPrice, nextJualPrice]);
+      await notify(conn, {
+        type: 'sale',
+        title: 'Penjualan Baru',
+        message: `${invoiceNo} • Rp ${Number(nextJualPrice).toLocaleString('id-ID')}`,
+        ref_type: 'sale',
+        ref_id: saleResult.insertId,
+      });
+    } else if (current.status === 'terjual' && nextStatus !== 'terjual') {
+      // Status reverted away from "Terjual" — undo the auto-recorded sale so profit stays in sync.
+      const [linked] = await conn.query('SELECT sale_id FROM sale_items WHERE macbook_id = ?', [req.params.id]);
+      for (const row of linked) {
+        await conn.query('DELETE FROM sales WHERE id = ?', [row.sale_id]);
+      }
+    }
+
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+
   const [rows] = await pool.query('SELECT * FROM macbooks WHERE id = ?', [req.params.id]);
   res.json(serialize(rows[0]));
 }

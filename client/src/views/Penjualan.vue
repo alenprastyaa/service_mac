@@ -25,6 +25,7 @@ const showDetail = ref(false);
 const detail = ref(null);
 
 const products = ref([]);
+const macbooks = ref([]);
 const customers = ref([]);
 const productSearch = ref('');
 const cart = ref([]);
@@ -49,15 +50,28 @@ function onSearchInput() {
 
 const filteredProducts = computed(() => {
   const q = productSearch.value.toLowerCase();
-  return products.value.filter((p) => p.stock_qty > 0 && (!q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)));
+  const productResults = products.value
+    .filter((p) => p.stock_qty > 0 && (!q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)))
+    .map((p) => ({ type: 'product', id: p.id, name: p.name, sku: p.sku, price: Number(p.sell_price), stockLabel: `Stok: ${p.stock_qty}`, maxStock: p.stock_qty }));
+
+  const cartedMacbookIds = new Set(cart.value.filter((c) => c.type === 'macbook').map((c) => c.macbook_id));
+  const macbookResults = macbooks.value
+    .filter((m) => !cartedMacbookIds.has(m.id) && (!q || m.model_name.toLowerCase().includes(q) || (m.serial_number || '').toLowerCase().includes(q)))
+    .map((m) => ({ type: 'macbook', id: m.id, name: m.model_name, sku: m.serial_number || '-', price: Number(m.jual_price), stockLabel: 'Unit MacBook', maxStock: 1 }));
+
+  return [...productResults, ...macbookResults];
 });
 
-function addToCart(p) {
-  const existing = cart.value.find((c) => c.product_id === p.id);
-  if (existing) {
-    if (existing.qty < p.stock_qty) existing.qty++;
+function addToCart(item) {
+  if (item.type === 'macbook') {
+    cart.value.push({ type: 'macbook', macbook_id: item.id, name: item.name, sku: item.sku, price: item.price, qty: 1, maxStock: 1 });
   } else {
-    cart.value.push({ product_id: p.id, name: p.name, sku: p.sku, price: Number(p.sell_price), qty: 1, maxStock: p.stock_qty });
+    const existing = cart.value.find((c) => c.type === 'product' && c.product_id === item.id);
+    if (existing) {
+      if (existing.qty < item.maxStock) existing.qty++;
+    } else {
+      cart.value.push({ type: 'product', product_id: item.id, name: item.name, sku: item.sku, price: item.price, qty: 1, maxStock: item.maxStock });
+    }
   }
   productSearch.value = '';
 }
@@ -85,8 +99,9 @@ function resetPos() {
 
 async function openPos() {
   resetPos();
-  const [p, c] = await Promise.all([api.get('/products'), api.get('/customers')]);
+  const [p, m, c] = await Promise.all([api.get('/products'), api.get('/macbooks', { params: { status: 'ready' } }), api.get('/customers')]);
   products.value = p.data;
+  macbooks.value = m.data;
   customers.value = c.data;
   showPos.value = true;
 }
@@ -102,7 +117,7 @@ async function submitSale() {
   try {
     const { data } = await api.post('/sales', {
       customer_id: customerId.value || null,
-      items: cart.value.map((c) => ({ product_id: c.product_id, qty: c.qty, price: c.price })),
+      items: cart.value.map((c) => (c.type === 'macbook' ? { macbook_id: c.macbook_id, qty: 1, price: c.price } : { product_id: c.product_id, qty: c.qty, price: c.price })),
       discount: Number(discount.value || 0),
       payment_method: paymentMethod.value,
       status: 'lunas',
@@ -198,16 +213,19 @@ onMounted(loadSales);
           <div class="space-y-1 max-h-72 overflow-y-auto">
             <button
               v-for="p in filteredProducts"
-              :key="p.id"
+              :key="`${p.type}-${p.id}`"
               type="button"
               class="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-left"
               @click="addToCart(p)"
             >
               <div class="min-w-0">
-                <p class="text-sm font-medium truncate">{{ p.name }}</p>
-                <p class="text-xs text-neutral-400">Stok: {{ p.stock_qty }}</p>
+                <p class="text-sm font-medium truncate">
+                  {{ p.name }}
+                  <span v-if="p.type === 'macbook'" class="badge bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400 ml-1 align-middle">MacBook</span>
+                </p>
+                <p class="text-xs text-neutral-400">{{ p.stockLabel }}</p>
               </div>
-              <span class="text-sm font-medium shrink-0 ml-2">{{ formatCurrency(p.sell_price) }}</span>
+              <span class="text-sm font-medium shrink-0 ml-2">{{ formatCurrency(p.price) }}</span>
             </button>
             <p v-if="productSearch && !filteredProducts.length" class="text-sm text-neutral-400 py-3">Produk tidak ditemukan.</p>
           </div>
@@ -220,14 +238,19 @@ onMounted(loadSales);
           </div>
           <EmptyState v-if="!cart.length" message="Belum ada produk di keranjang." />
           <div v-else class="space-y-2 max-h-56 overflow-y-auto mb-4">
-            <div v-for="(item, i) in cart" :key="item.product_id" class="flex items-center gap-2 text-sm">
+            <div v-for="(item, i) in cart" :key="`${item.type}-${item.product_id || item.macbook_id}`" class="flex items-center gap-2 text-sm">
               <div class="min-w-0 flex-1">
-                <p class="font-medium truncate">{{ item.name }}</p>
+                <p class="font-medium truncate">
+                  {{ item.name }}
+                  <span v-if="item.type === 'macbook'" class="badge bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400 ml-1 align-middle">MacBook</span>
+                </p>
                 <p class="text-xs text-neutral-400">{{ formatCurrency(item.price) }}</p>
               </div>
-              <button type="button" class="w-6 h-6 rounded-md bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center" @click="decQty(item, i)"><Minus :size="12" /></button>
-              <span class="w-6 text-center">{{ item.qty }}</span>
-              <button type="button" class="w-6 h-6 rounded-md bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center" @click="incQty(item)"><Plus :size="12" /></button>
+              <template v-if="item.type === 'product'">
+                <button type="button" class="w-6 h-6 rounded-md bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center" @click="decQty(item, i)"><Minus :size="12" /></button>
+                <span class="w-6 text-center">{{ item.qty }}</span>
+                <button type="button" class="w-6 h-6 rounded-md bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center" @click="incQty(item)"><Plus :size="12" /></button>
+              </template>
               <button type="button" class="w-7 h-7 rounded-md flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-950" @click="removeFromCart(i)"><Trash2 :size="14" /></button>
             </div>
           </div>

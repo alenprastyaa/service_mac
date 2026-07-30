@@ -52,11 +52,19 @@ async function get(req, res) {
     [req.params.id]
   );
   if (!sales[0]) return res.status(404).json({ error: 'Transaksi tidak ditemukan' });
-  const [items] = await pool.query('SELECT si.*, p.name AS product_name, p.sku FROM sale_items si JOIN products p ON p.id = si.product_id WHERE si.sale_id = ?', [req.params.id]);
+  const [items] = await pool.query(
+    `SELECT si.*, COALESCE(p.name, m.model_name) AS product_name, COALESCE(p.sku, m.serial_number) AS sku
+     FROM sale_items si
+     LEFT JOIN products p ON p.id = si.product_id
+     LEFT JOIN macbooks m ON m.id = si.macbook_id
+     WHERE si.sale_id = ?`,
+    [req.params.id]
+  );
   res.json({ ...sales[0], items });
 }
 
-// Creates a sale with line items, decrements stock, and logs the movement in one transaction.
+// Creates a sale with line items, decrements stock (or marks a MacBook unit as sold),
+// and logs the movement in one transaction.
 async function create(req, res) {
   const { customer_id, items, discount = 0, tax = 0, payment_method = 'tunai', status = 'lunas' } = req.body;
   if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ error: 'Minimal 1 produk harus ditambahkan' });
@@ -68,14 +76,25 @@ async function create(req, res) {
     let subtotal = 0;
     const resolvedItems = [];
     for (const item of items) {
-      const [products] = await conn.query('SELECT * FROM products WHERE id = ? FOR UPDATE', [item.product_id]);
-      const product = products[0];
-      if (!product) throw Object.assign(new Error(`Produk id ${item.product_id} tidak ditemukan`), { status: 404 });
-      if (product.stock_qty < item.qty) throw Object.assign(new Error(`Stok ${product.name} tidak mencukupi (tersisa ${product.stock_qty})`), { status: 400 });
-      const price = item.price ?? product.sell_price;
-      const itemSubtotal = price * item.qty;
-      subtotal += itemSubtotal;
-      resolvedItems.push({ product, qty: item.qty, price, itemSubtotal });
+      if (item.macbook_id) {
+        const [macbooks] = await conn.query('SELECT * FROM macbooks WHERE id = ? FOR UPDATE', [item.macbook_id]);
+        const macbook = macbooks[0];
+        if (!macbook) throw Object.assign(new Error(`Unit MacBook id ${item.macbook_id} tidak ditemukan`), { status: 404 });
+        if (macbook.status !== 'ready') throw Object.assign(new Error(`Unit ${macbook.model_name} sudah tidak tersedia untuk dijual`), { status: 400 });
+        const price = item.price ?? macbook.jual_price;
+        const itemSubtotal = price * 1;
+        subtotal += itemSubtotal;
+        resolvedItems.push({ type: 'macbook', macbook, qty: 1, price, itemSubtotal });
+      } else {
+        const [products] = await conn.query('SELECT * FROM products WHERE id = ? FOR UPDATE', [item.product_id]);
+        const product = products[0];
+        if (!product) throw Object.assign(new Error(`Produk id ${item.product_id} tidak ditemukan`), { status: 404 });
+        if (product.stock_qty < item.qty) throw Object.assign(new Error(`Stok ${product.name} tidak mencukupi (tersisa ${product.stock_qty})`), { status: 400 });
+        const price = item.price ?? product.sell_price;
+        const itemSubtotal = price * item.qty;
+        subtotal += itemSubtotal;
+        resolvedItems.push({ type: 'product', product, qty: item.qty, price, itemSubtotal });
+      }
     }
     const total = subtotal - Number(discount) + Number(tax);
     const invoiceNo = await nextInvoiceNo(conn);
@@ -86,12 +105,19 @@ async function create(req, res) {
     );
     const saleId = saleResult.insertId;
 
-    for (const { product, qty, price, itemSubtotal } of resolvedItems) {
-      await conn.query('INSERT INTO sale_items (sale_id, product_id, qty, price, subtotal) VALUES (?, ?, ?, ?, ?)', [saleId, product.id, qty, price, itemSubtotal]);
-      await conn.query('UPDATE products SET stock_qty = stock_qty - ? WHERE id = ?', [qty, product.id]);
-      await conn.query('INSERT INTO stock_movements (product_id, type, qty, note, ref_type, ref_id, created_by) VALUES (?, "out", ?, ?, "sale", ?, ?)', [
-        product.id, qty, `Penjualan ${invoiceNo}`, saleId, req.user.id,
-      ]);
+    for (const resolved of resolvedItems) {
+      if (resolved.type === 'macbook') {
+        const { macbook, price, itemSubtotal } = resolved;
+        await conn.query('INSERT INTO sale_items (sale_id, macbook_id, qty, price, subtotal) VALUES (?, ?, ?, ?, ?)', [saleId, macbook.id, 1, price, itemSubtotal]);
+        await conn.query('UPDATE macbooks SET status = "terjual" WHERE id = ?', [macbook.id]);
+      } else {
+        const { product, qty, price, itemSubtotal } = resolved;
+        await conn.query('INSERT INTO sale_items (sale_id, product_id, qty, price, subtotal) VALUES (?, ?, ?, ?, ?)', [saleId, product.id, qty, price, itemSubtotal]);
+        await conn.query('UPDATE products SET stock_qty = stock_qty - ? WHERE id = ?', [qty, product.id]);
+        await conn.query('INSERT INTO stock_movements (product_id, type, qty, note, ref_type, ref_id, created_by) VALUES (?, "out", ?, ?, "sale", ?, ?)', [
+          product.id, qty, `Penjualan ${invoiceNo}`, saleId, req.user.id,
+        ]);
+      }
     }
 
     await notify(conn, {
@@ -122,8 +148,8 @@ async function updateStatus(req, res) {
   res.json(rows[0]);
 }
 
-// Deletes a sale entirely, restoring stock for any product it consumed.
-// sale_items cascades via FK.
+// Deletes a sale entirely, restoring stock for any product it consumed (or
+// setting any MacBook unit it sold back to "ready"). sale_items cascades via FK.
 async function remove(req, res) {
   const conn = await pool.getConnection();
   try {
@@ -131,12 +157,16 @@ async function remove(req, res) {
     const [existing] = await conn.query('SELECT invoice_no FROM sales WHERE id = ? FOR UPDATE', [req.params.id]);
     if (!existing[0]) throw Object.assign(new Error('Transaksi tidak ditemukan'), { status: 404 });
 
-    const [items] = await conn.query('SELECT product_id, qty FROM sale_items WHERE sale_id = ?', [req.params.id]);
+    const [items] = await conn.query('SELECT product_id, macbook_id, qty FROM sale_items WHERE sale_id = ?', [req.params.id]);
     for (const item of items) {
-      await conn.query('UPDATE products SET stock_qty = stock_qty + ? WHERE id = ?', [item.qty, item.product_id]);
-      await conn.query('INSERT INTO stock_movements (product_id, type, qty, note, ref_type, ref_id, created_by) VALUES (?, "in", ?, ?, "sale", ?, ?)', [
-        item.product_id, item.qty, `Hapus transaksi ${existing[0].invoice_no}`, req.params.id, req.user.id,
-      ]);
+      if (item.macbook_id) {
+        await conn.query('UPDATE macbooks SET status = "ready" WHERE id = ?', [item.macbook_id]);
+      } else {
+        await conn.query('UPDATE products SET stock_qty = stock_qty + ? WHERE id = ?', [item.qty, item.product_id]);
+        await conn.query('INSERT INTO stock_movements (product_id, type, qty, note, ref_type, ref_id, created_by) VALUES (?, "in", ?, ?, "sale", ?, ?)', [
+          item.product_id, item.qty, `Hapus transaksi ${existing[0].invoice_no}`, req.params.id, req.user.id,
+        ]);
+      }
     }
     await conn.query('DELETE FROM sales WHERE id = ?', [req.params.id]);
     await conn.commit();
@@ -149,4 +179,4 @@ async function remove(req, res) {
   }
 }
 
-module.exports = { list, get, create, updateStatus, remove };
+module.exports = { list, get, create, updateStatus, remove, nextInvoiceNo };

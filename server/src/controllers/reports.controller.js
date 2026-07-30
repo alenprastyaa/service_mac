@@ -40,23 +40,39 @@ async function salesReport(req, res) {
 async function profitReport(req, res) {
   const { from, to } = dateRange(req.query);
   const [rows] = await pool.query(
-    `SELECT p.name AS product, p.sku, SUM(si.qty) AS qty_terjual, SUM(si.subtotal) AS total_penjualan,
-        SUM(si.qty * p.purchase_price) AS total_modal, SUM(si.subtotal - (si.qty * p.purchase_price)) AS profit
-     FROM sale_items si
-     JOIN sales s ON s.id = si.sale_id
-     JOIN products p ON p.id = si.product_id
-     WHERE s.created_at BETWEEN ? AND ? AND s.status != 'dibatalkan'
-     GROUP BY p.id, p.name, p.sku
+    `SELECT * FROM (
+       (SELECT p.name AS product, p.sku, SUM(si.qty) AS qty_terjual, SUM(si.subtotal) AS total_penjualan,
+           SUM(si.qty * p.purchase_price) AS total_modal, SUM(si.subtotal - (si.qty * p.purchase_price)) AS profit
+        FROM sale_items si
+        JOIN sales s ON s.id = si.sale_id
+        JOIN products p ON p.id = si.product_id
+        WHERE s.created_at BETWEEN ? AND ? AND s.status != 'dibatalkan'
+        GROUP BY p.id, p.name, p.sku)
+       UNION ALL
+       (SELECT m.model_name AS product, COALESCE(m.serial_number, CONCAT('MB', LPAD(m.id, 6, '0'))) AS sku,
+           1 AS qty_terjual, si.subtotal AS total_penjualan, m.modal_price AS total_modal, (si.subtotal - m.modal_price) AS profit
+        FROM sale_items si
+        JOIN sales s ON s.id = si.sale_id
+        JOIN macbooks m ON m.id = si.macbook_id
+        WHERE s.created_at BETWEEN ? AND ? AND s.status != 'dibatalkan')
+     ) combined
      ORDER BY profit DESC`,
-    [from, to]
+    [from, to, from, to]
   );
   sendReport(req, res, rows, 'laporan-profit');
 }
 
 async function stockReport(req, res) {
   const [rows] = await pool.query(
-    `SELECT sku, name, category, stock_qty, min_stock, purchase_price, sell_price, (stock_qty * purchase_price) AS nilai_stok
-     FROM products ORDER BY category ASC, name ASC`
+    `SELECT * FROM (
+       (SELECT sku, name, category, stock_qty, min_stock, purchase_price, sell_price, (stock_qty * purchase_price) AS nilai_stok
+        FROM products)
+       UNION ALL
+       (SELECT COALESCE(serial_number, CONCAT('MB', LPAD(id, 6, '0'))) AS sku, model_name AS name, 'MacBook (Ready)' AS category,
+           1 AS stock_qty, 1 AS min_stock, modal_price AS purchase_price, jual_price AS sell_price, modal_price AS nilai_stok
+        FROM macbooks WHERE status = 'ready')
+     ) combined
+     ORDER BY category ASC, name ASC`
   );
   sendReport(req, res, rows, 'laporan-stok');
 }

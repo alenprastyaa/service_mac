@@ -30,6 +30,7 @@ const COLUMNS = [
   'ALTER TABLE suppliers ADD COLUMN bank_account_holder VARCHAR(100)',
   'ALTER TABLE users ADD COLUMN avatar_url VARCHAR(255) DEFAULT NULL',
   'ALTER TABLE store_settings ADD COLUMN default_min_stock INT NOT NULL DEFAULT 3',
+  'ALTER TABLE sale_items ADD COLUMN macbook_id INT DEFAULT NULL',
 ];
 
 // Creates the database and all tables if they don't exist yet. Safe to run on every
@@ -63,10 +64,22 @@ async function ensureSchema() {
       }
     }
 
+    await ensureSaleItemsAllowMacbook(conn);
     await ensureSupplierCodes(conn);
     await ensureDefaultOwner(conn);
   } finally {
     await conn.end();
+  }
+}
+
+// sale_items.product_id shipped as NOT NULL — relax it so a line item can
+// reference macbook_id instead (a MacBook unit sale) with no product_id set.
+async function ensureSaleItemsAllowMacbook(conn) {
+  await conn.query('ALTER TABLE sale_items MODIFY product_id INT DEFAULT NULL');
+  try {
+    await conn.query('ALTER TABLE sale_items ADD FOREIGN KEY (macbook_id) REFERENCES macbooks(id)');
+  } catch (err) {
+    if (err.code !== 'ER_FK_DUP_NAME' && err.errno !== 121) throw err;
   }
 }
 

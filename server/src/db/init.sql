@@ -138,15 +138,19 @@ CREATE TABLE IF NOT EXISTS sales (
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
+-- A line item references EITHER product_id (sparepart, qty can be >1) OR
+-- macbook_id (a specific unit, qty always 1) — never both.
 CREATE TABLE IF NOT EXISTS sale_items (
   id INT AUTO_INCREMENT PRIMARY KEY,
   sale_id INT NOT NULL,
-  product_id INT NOT NULL,
+  product_id INT DEFAULT NULL,
+  macbook_id INT DEFAULT NULL,
   qty INT NOT NULL,
   price DECIMAL(14,2) NOT NULL,
   subtotal DECIMAL(14,2) NOT NULL,
   FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE,
-  FOREIGN KEY (product_id) REFERENCES products(id)
+  FOREIGN KEY (product_id) REFERENCES products(id),
+  FOREIGN KEY (macbook_id) REFERENCES macbooks(id)
 );
 
 CREATE TABLE IF NOT EXISTS services (

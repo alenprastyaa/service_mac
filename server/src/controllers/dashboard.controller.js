@@ -20,17 +20,19 @@ async function summary(req, res) {
   );
 
   const [[monthProfit]] = await pool.query(
-    `SELECT COALESCE(SUM((si.price - p.purchase_price) * si.qty), 0) AS profit
+    `SELECT COALESCE(SUM((si.price - COALESCE(p.purchase_price, m.modal_price)) * si.qty), 0) AS profit
      FROM sale_items si
      JOIN sales s ON s.id = si.sale_id
-     JOIN products p ON p.id = si.product_id
+     LEFT JOIN products p ON p.id = si.product_id
+     LEFT JOIN macbooks m ON m.id = si.macbook_id
      WHERE MONTH(s.created_at) = MONTH(CURDATE()) AND YEAR(s.created_at) = YEAR(CURDATE()) AND s.status != 'dibatalkan'`
   );
   const [[lastMonthProfit]] = await pool.query(
-    `SELECT COALESCE(SUM((si.price - p.purchase_price) * si.qty), 0) AS profit
+    `SELECT COALESCE(SUM((si.price - COALESCE(p.purchase_price, m.modal_price)) * si.qty), 0) AS profit
      FROM sale_items si
      JOIN sales s ON s.id = si.sale_id
-     JOIN products p ON p.id = si.product_id
+     LEFT JOIN products p ON p.id = si.product_id
+     LEFT JOIN macbooks m ON m.id = si.macbook_id
      WHERE MONTH(s.created_at) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) AND YEAR(s.created_at) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) AND s.status != 'dibatalkan'`
   );
 
@@ -55,7 +57,7 @@ async function summary(req, res) {
 
   const [recentTransactions] = await pool.query(
     `(SELECT s.id, s.invoice_no AS ref_no, c.name AS customer_name, 'Penjualan' AS type,
-        (SELECT GROUP_CONCAT(p.name SEPARATOR ', ') FROM sale_items si JOIN products p ON p.id = si.product_id WHERE si.sale_id = s.id) AS description,
+        (SELECT GROUP_CONCAT(COALESCE(p.name, m.model_name) SEPARATOR ', ') FROM sale_items si LEFT JOIN products p ON p.id = si.product_id LEFT JOIN macbooks m ON m.id = si.macbook_id WHERE si.sale_id = s.id) AS description,
         s.total, s.status, s.created_at
       FROM sales s LEFT JOIN customers c ON c.id = s.customer_id)
      UNION ALL
