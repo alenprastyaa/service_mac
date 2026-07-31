@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS sales (
   discount DECIMAL(14,2) NOT NULL DEFAULT 0,
   tax DECIMAL(14,2) NOT NULL DEFAULT 0,
   total DECIMAL(14,2) NOT NULL DEFAULT 0,
-  payment_method ENUM('tunai', 'transfer', 'qris', 'kartu') NOT NULL DEFAULT 'tunai',
+  payment_method ENUM('tunai', 'transfer', 'qris', 'qris_bca', 'qris_bri', 'kartu') NOT NULL DEFAULT 'tunai',
   status ENUM('lunas', 'belum_lunas', 'dibatalkan') NOT NULL DEFAULT 'lunas',
   created_by INT DEFAULT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

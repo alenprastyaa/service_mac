@@ -65,6 +65,7 @@ async function ensureSchema() {
     }
 
     await ensureSaleItemsAllowMacbook(conn);
+    await ensureSalesPaymentMethods(conn);
     await ensureSupplierCodes(conn);
     await ensureDefaultOwner(conn);
   } finally {
@@ -81,6 +82,13 @@ async function ensureSaleItemsAllowMacbook(conn) {
   } catch (err) {
     if (err.code !== 'ER_FK_DUP_NAME' && err.errno !== 121) throw err;
   }
+}
+
+// Split the old generic "qris" option into qris_bca / qris_bri going forward.
+// The plain "qris" value stays in the enum (and its label) so existing sales
+// that already used it keep displaying correctly.
+async function ensureSalesPaymentMethods(conn) {
+  await conn.query("ALTER TABLE sales MODIFY payment_method ENUM('tunai', 'transfer', 'qris', 'qris_bca', 'qris_bri', 'kartu') NOT NULL DEFAULT 'tunai'");
 }
 
 // Backfills the Kode Supplier (SUP-0001, derived from id) for suppliers that

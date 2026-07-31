@@ -39,7 +39,9 @@ export const STATUS_LABELS = {
 export const PAYMENT_METHOD_LABELS = {
   tunai: 'Tunai',
   transfer: 'Transfer Bank',
-  qris: 'QRIS',
+  qris: 'QRIS', // legacy value — kept so older transactions still display correctly
+  qris_bca: 'QRIS BCA',
+  qris_bri: 'QRIS BRI',
   kartu: 'Kartu Debit/Kredit',
 };
 

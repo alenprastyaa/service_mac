@@ -8,7 +8,7 @@ import StatusBadge from '../components/StatusBadge.vue';
 import EmptyState from '../components/EmptyState.vue';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import SaleSuccessModal from '../components/SaleSuccessModal.vue';
-import { formatCurrency, formatDateTime } from '../lib/format';
+import { formatCurrency, formatDateTime, PAYMENT_METHOD_LABELS } from '../lib/format';
 import { useAuthStore } from '../stores/auth';
 
 const router = useRouter();
@@ -268,7 +268,8 @@ onMounted(loadSales);
               <select v-model="paymentMethod" class="input">
                 <option value="tunai">Tunai</option>
                 <option value="transfer">Transfer</option>
-                <option value="qris">QRIS</option>
+                <option value="qris_bca">QRIS BCA</option>
+                <option value="qris_bri">QRIS BRI</option>
                 <option value="kartu">Kartu</option>
               </select>
             </div>
@@ -295,7 +296,7 @@ onMounted(loadSales);
       <div class="text-sm space-y-1 mb-4">
         <p><span class="text-neutral-500">Pelanggan:</span> {{ detail.customer_name || 'Tanpa nama' }}</p>
         <p><span class="text-neutral-500">Tanggal:</span> {{ formatDateTime(detail.created_at) }}</p>
-        <p><span class="text-neutral-500">Pembayaran:</span> {{ detail.payment_method }}</p>
+        <p><span class="text-neutral-500">Pembayaran:</span> {{ PAYMENT_METHOD_LABELS[detail.payment_method] || detail.payment_method }}</p>
       </div>
       <table class="w-full text-sm mb-4">
         <thead>
