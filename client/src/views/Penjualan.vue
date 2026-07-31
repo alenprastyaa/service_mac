@@ -267,7 +267,8 @@ onMounted(loadSales);
               <label class="label">Pembayaran</label>
               <select v-model="paymentMethod" class="input">
                 <option value="tunai">Tunai</option>
-                <option value="transfer">Transfer</option>
+                <option value="transfer_bca">Transfer BCA</option>
+                <option value="transfer_bri">Transfer BRI</option>
                 <option value="qris_bca">QRIS BCA</option>
                 <option value="qris_bri">QRIS BRI</option>
                 <option value="kartu">Kartu</option>

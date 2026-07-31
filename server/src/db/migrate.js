@@ -84,11 +84,13 @@ async function ensureSaleItemsAllowMacbook(conn) {
   }
 }
 
-// Split the old generic "qris" option into qris_bca / qris_bri going forward.
-// The plain "qris" value stays in the enum (and its label) so existing sales
-// that already used it keep displaying correctly.
+// Split the old generic "qris"/"transfer" options into bank-specific ones
+// going forward. The plain "qris"/"transfer" values stay in the enum (and
+// their labels) so existing sales that already used them keep displaying correctly.
 async function ensureSalesPaymentMethods(conn) {
-  await conn.query("ALTER TABLE sales MODIFY payment_method ENUM('tunai', 'transfer', 'qris', 'qris_bca', 'qris_bri', 'kartu') NOT NULL DEFAULT 'tunai'");
+  await conn.query(
+    "ALTER TABLE sales MODIFY payment_method ENUM('tunai', 'transfer', 'transfer_bca', 'transfer_bri', 'qris', 'qris_bca', 'qris_bri', 'kartu') NOT NULL DEFAULT 'tunai'"
+  );
 }
 
 // Backfills the Kode Supplier (SUP-0001, derived from id) for suppliers that
