@@ -104,8 +104,9 @@ async function confirmDelete() {
 }
 
 function stockClass(p) {
-  if (p.stock_qty <= p.min_stock) return 'text-red-500 font-semibold';
-  if (p.stock_qty <= p.min_stock * 2) return 'text-amber-500 font-semibold';
+  const threshold = storeSettings.data?.default_min_stock ?? 3;
+  if (p.stock_qty < threshold) return 'text-red-500 font-semibold';
+  if (p.stock_qty < threshold * 2) return 'text-amber-500 font-semibold';
   return 'text-emerald-600 font-semibold';
 }
 
@@ -228,14 +229,11 @@ onMounted(() => {
             <input v-model.number="form.sell_price" type="number" min="0" class="input" />
           </div>
         </div>
-        <div class="grid grid-cols-3 gap-3">
-          <div v-if="!editing">
-            <label class="label">Stok Awal</label>
-            <input v-model.number="form.stock_qty" type="number" min="0" class="input" />
-          </div>
+        <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="label">Stok Minimum</label>
-            <input v-model.number="form.min_stock" type="number" min="0" class="input" />
+            <label class="label">{{ editing ? 'Stok' : 'Stok Awal' }}</label>
+            <input v-model.number="form.stock_qty" type="number" min="0" class="input" />
+            <p v-if="editing" class="text-xs text-neutral-400 mt-1">Diubah manual akan tercatat sebagai penyesuaian stok.</p>
           </div>
           <div>
             <label class="label">Satuan</label>
@@ -274,7 +272,6 @@ onMounted(() => {
           <div><dt class="text-xs text-neutral-400">Harga Beli</dt><dd>{{ formatCurrency(viewing.purchase_price) }}</dd></div>
           <div><dt class="text-xs text-neutral-400">Harga Jual</dt><dd class="font-semibold text-brand-600 dark:text-brand-400">{{ formatCurrency(viewing.sell_price) }}</dd></div>
           <div><dt class="text-xs text-neutral-400">Stok</dt><dd :class="stockClass(viewing)">{{ viewing.stock_qty }} {{ viewing.unit }}</dd></div>
-          <div><dt class="text-xs text-neutral-400">Stok Minimum</dt><dd>{{ viewing.min_stock }} {{ viewing.unit }}</dd></div>
           <div class="sm:col-span-2"><dt class="text-xs text-neutral-400">Ditambahkan</dt><dd>{{ formatDateTime(viewing.created_at) }}</dd></div>
         </dl>
         <div class="flex justify-end pt-2">

@@ -36,7 +36,13 @@ async function summary(req, res) {
      WHERE MONTH(s.created_at) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) AND YEAR(s.created_at) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) AND s.status != 'dibatalkan'`
   );
 
-  const [[sparepartStock]] = await pool.query('SELECT COALESCE(SUM(stock_qty), 0) AS total_units, SUM(CASE WHEN stock_qty <= min_stock THEN 1 ELSE 0 END) AS low_stock_count FROM products');
+  const [[storeSettings]] = await pool.query('SELECT monthly_omzet_target, default_min_stock FROM store_settings WHERE id = 1');
+  const lowStockThreshold = storeSettings?.default_min_stock ?? 3;
+
+  const [[sparepartStock]] = await pool.query(
+    'SELECT COALESCE(SUM(stock_qty), 0) AS total_units, SUM(CASE WHEN stock_qty < ? THEN 1 ELSE 0 END) AS low_stock_count FROM products',
+    [lowStockThreshold]
+  );
   const [[macbookStock]] = await pool.query("SELECT COUNT(*) AS total_units FROM macbooks WHERE status = 'ready'");
 
   const [[serviceStats]] = await pool.query(
@@ -51,9 +57,7 @@ async function summary(req, res) {
      FROM services`
   );
 
-  const [[storeSettings]] = await pool.query('SELECT monthly_omzet_target FROM store_settings WHERE id = 1');
-
-  const [lowStockProducts] = await pool.query('SELECT id, name, stock_qty, min_stock, unit FROM products WHERE stock_qty <= min_stock ORDER BY stock_qty ASC LIMIT 5');
+  const [lowStockProducts] = await pool.query('SELECT id, name, stock_qty, unit FROM products WHERE stock_qty < ? ORDER BY stock_qty ASC LIMIT 5', [lowStockThreshold]);
 
   const [recentTransactions] = await pool.query(
     `(SELECT s.id, s.invoice_no AS ref_no, c.name AS customer_name, 'Penjualan' AS type,

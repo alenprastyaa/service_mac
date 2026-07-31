@@ -375,10 +375,10 @@ onMounted(() => {
     </div>
 
     <div v-if="isOwnerOrAdmin && storeForm" class="card p-5 mb-4">
-      <h3 class="font-semibold mb-1 flex items-center gap-2"><PackageCheck :size="17" class="text-brand-500" /> Stok Minimum Default</h3>
-      <p class="text-xs text-neutral-500 mb-4">Dipakai sebagai isian awal "Stok Minimum" saat menambah Part baru — tiap part tetap bisa diubah sendiri nilainya.</p>
+      <h3 class="font-semibold mb-1 flex items-center gap-2"><PackageCheck :size="17" class="text-brand-500" /> Batas Stok Menipis</h3>
+      <p class="text-xs text-neutral-500 mb-4">Berlaku untuk SEMUA part — barang dianggap "stok menipis" kalau stoknya di bawah angka ini (bukan diatur per barang).</p>
       <div class="max-w-xs">
-        <label class="label">Stok Minimum Default</label>
+        <label class="label">Batas Stok Menipis (unit)</label>
         <input v-model.number="storeForm.default_min_stock" type="number" min="0" class="input" />
       </div>
       <p v-if="minStockError" class="text-sm text-red-500 mt-3">{{ minStockError }}</p>

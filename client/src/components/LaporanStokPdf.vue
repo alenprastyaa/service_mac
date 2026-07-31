@@ -13,7 +13,12 @@ const props = defineProps({
 });
 
 const totalNilaiStok = computed(() => props.rows.reduce((sum, r) => sum + Number(r.nilai_stok), 0));
-const lowStockCount = computed(() => props.rows.filter((r) => r.stock_qty <= r.min_stock).length);
+// Stok menipis pakai satu ambang batas global (Pengaturan), bukan per-item — dan
+// cuma berlaku utk sparepart, bukan unit MacBook (1 unit ready bukan berarti menipis).
+function isLowStock(r) {
+  return r.category !== 'MacBook (Ready)' && r.stock_qty < (props.store.default_min_stock ?? 3);
+}
+const lowStockCount = computed(() => props.rows.filter(isLowStock).length);
 const generatedAt = computed(() => formatDateTime(new Date()));
 </script>
 
@@ -40,7 +45,7 @@ const generatedAt = computed(() => formatDateTime(new Date()));
       <div class="rounded-xl p-4 bg-gradient-to-br from-red-400 to-red-600 text-white">
         <p class="text-xs opacity-90">Stok Menipis</p>
         <p class="text-lg font-bold mt-1 truncate">{{ lowStockCount }}</p>
-        <p class="text-[11px] opacity-80 mt-0.5">item di bawah/sama stok minimum</p>
+        <p class="text-[11px] opacity-80 mt-0.5">item di bawah {{ store.default_min_stock ?? 3 }} unit</p>
       </div>
     </div>
 
@@ -54,13 +59,13 @@ const generatedAt = computed(() => formatDateTime(new Date()));
         </tr>
       </thead>
       <tbody>
-        <tr v-for="r in rows" :key="r.sku" class="border-b border-neutral-100 last:border-0" :class="r.stock_qty <= r.min_stock ? 'bg-red-50' : ''">
+        <tr v-for="r in rows" :key="r.sku" class="border-b border-neutral-100 last:border-0" :class="isLowStock(r) ? 'bg-red-50' : ''">
           <td class="px-3 py-2.5">
             <p class="font-medium">{{ r.name }}</p>
             <p class="text-xs text-neutral-400">{{ r.sku }}</p>
           </td>
           <td class="px-3 py-2.5 text-neutral-600">{{ r.category }}</td>
-          <td class="px-3 py-2.5 text-right" :class="r.stock_qty <= r.min_stock ? 'text-red-500 font-semibold' : ''">{{ r.stock_qty }}</td>
+          <td class="px-3 py-2.5 text-right" :class="isLowStock(r) ? 'text-red-500 font-semibold' : ''">{{ r.stock_qty }}</td>
           <td class="px-3 py-2.5 text-right font-medium">{{ formatCurrency(r.nilai_stok) }}</td>
         </tr>
       </tbody>

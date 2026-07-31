@@ -47,6 +47,11 @@ function isOverdue(d) {
   return d.status === 'belum_lunas' && d.due_date && new Date(d.due_date) < new Date(new Date().toDateString());
 }
 
+// Stok menipis pakai satu ambang batas global (Pengaturan), bukan per-item.
+function isLowStock(r) {
+  return r.category !== 'MacBook (Ready)' && r.stock_qty < (storeSettings.data?.default_min_stock ?? 3);
+}
+
 async function load() {
   loading.value = true;
   const { data } = await api.get(`/reports/${tab.value}`, { params: { from: from.value, to: to.value } });
@@ -86,7 +91,10 @@ async function downloadPdf() {
 }
 
 watch([tab, from, to], load);
-onMounted(load);
+onMounted(() => {
+  load();
+  storeSettings.fetch();
+});
 </script>
 
 <template>
@@ -186,7 +194,7 @@ onMounted(load);
               <td class="px-2 py-2.5 text-neutral-500">{{ r.sku }}</td>
               <td class="px-2 py-2.5 font-medium">{{ r.name }}</td>
               <td class="px-2 py-2.5 text-neutral-500">{{ r.category }}</td>
-              <td class="px-2 py-2.5 text-right" :class="r.stock_qty <= r.min_stock ? 'text-red-500 font-semibold' : ''">{{ r.stock_qty }}</td>
+              <td class="px-2 py-2.5 text-right" :class="isLowStock(r) ? 'text-red-500 font-semibold' : ''">{{ r.stock_qty }}</td>
               <td class="px-2 py-2.5 text-right font-medium">{{ formatCurrency(r.nilai_stok) }}</td>
             </tr>
           </tbody>

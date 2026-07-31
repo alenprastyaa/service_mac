@@ -181,15 +181,17 @@ export async function buildStockReportPdf(rows, store) {
   const doc = new jsPDF('p', 'mm', 'a4');
   const startY = await drawHeader(doc, { title: 'LAPORAN STOK', store, periodLabel: 'Posisi stok saat ini' });
 
+  const threshold = store.default_min_stock ?? 3;
+  const isLowStock = (r) => r.category !== 'MacBook (Ready)' && r.stock_qty < threshold;
   const totalNilaiStok = rows.reduce((sum, r) => sum + Number(r.nilai_stok), 0);
-  const lowStockCount = rows.filter((r) => r.stock_qty <= r.min_stock).length;
+  const lowStockCount = rows.filter(isLowStock).length;
 
   const tableY = drawSummaryBoxes(
     doc,
     [
       { label: 'Total Nilai Stok', value: formatCurrency(totalNilaiStok), color: COLORS.dark },
       { label: 'Jumlah Item', value: String(rows.length), color: COLORS.blue },
-      { label: 'Stok Menipis', value: String(lowStockCount), sub: 'item di bawah/sama minimum', color: COLORS.red },
+      { label: 'Stok Menipis', value: String(lowStockCount), sub: `item di bawah ${threshold} unit`, color: COLORS.red },
     ],
     startY
   );
@@ -201,7 +203,7 @@ export async function buildStockReportPdf(rows, store) {
     body: rows.map((r) => [r.name, r.sku, r.category, String(r.stock_qty), formatCurrency(r.nilai_stok)]),
     columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' } },
     didParseCell(data) {
-      if (data.section === 'body' && rows[data.row.index]?.stock_qty <= rows[data.row.index]?.min_stock) {
+      if (data.section === 'body' && isLowStock(rows[data.row.index])) {
         data.cell.styles.fillColor = [254, 242, 242];
         if (data.column.index === 3) data.cell.styles.textColor = COLORS.red;
       }

@@ -13,7 +13,9 @@ async function list(req, res) {
     params.push(category);
   }
   if (lowStock === 'true') {
-    clauses.push('stock_qty <= min_stock');
+    const [[settings]] = await pool.query('SELECT default_min_stock FROM store_settings WHERE id = 1');
+    clauses.push('stock_qty < ?');
+    params.push(settings?.default_min_stock ?? 3);
   }
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
   const [rows] = await pool.query(`SELECT * FROM products ${where} ORDER BY name ASC`, params);
@@ -41,13 +43,39 @@ async function create(req, res) {
 }
 
 async function update(req, res) {
-  const { name, category, brand, purchase_price, sell_price, min_stock, unit } = req.body;
+  const { name, category, brand, purchase_price, sell_price, min_stock, unit, stock_qty } = req.body;
   const [existing] = await pool.query('SELECT * FROM products WHERE id = ?', [req.params.id]);
   if (!existing[0]) return res.status(404).json({ error: 'Produk tidak ditemukan' });
+  const current = existing[0];
+  const nextStockQty = stock_qty === undefined || stock_qty === null || stock_qty === '' ? current.stock_qty : Number(stock_qty);
+
   await pool.query(
-    'UPDATE products SET name = ?, category = ?, brand = ?, purchase_price = ?, sell_price = ?, min_stock = ?, unit = ? WHERE id = ?',
-    [name ?? existing[0].name, category ?? existing[0].category, brand ?? existing[0].brand, purchase_price ?? existing[0].purchase_price, sell_price ?? existing[0].sell_price, min_stock ?? existing[0].min_stock, unit ?? existing[0].unit, req.params.id]
+    'UPDATE products SET name = ?, category = ?, brand = ?, purchase_price = ?, sell_price = ?, min_stock = ?, unit = ?, stock_qty = ? WHERE id = ?',
+    [
+      name ?? current.name,
+      category ?? current.category,
+      brand ?? current.brand,
+      purchase_price ?? current.purchase_price,
+      sell_price ?? current.sell_price,
+      min_stock ?? current.min_stock,
+      unit ?? current.unit,
+      nextStockQty,
+      req.params.id,
+    ]
   );
+
+  // Editing stock directly (outside Barang Masuk / Penjualan) is logged as an
+  // adjustment so there's still an audit trail of who changed it and by how much.
+  if (nextStockQty !== current.stock_qty) {
+    const delta = nextStockQty - current.stock_qty;
+    await pool.query('INSERT INTO stock_movements (product_id, type, qty, note, created_by) VALUES (?, "adjustment", ?, ?, ?)', [
+      req.params.id,
+      Math.abs(delta),
+      `Penyesuaian stok manual (${delta > 0 ? '+' : ''}${delta})`,
+      req.user.id,
+    ]);
+  }
+
   const [rows] = await pool.query('SELECT * FROM products WHERE id = ?', [req.params.id]);
   res.json(rows[0]);
 }
